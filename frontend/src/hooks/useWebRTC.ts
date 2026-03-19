@@ -129,7 +129,7 @@ export function useWebRTC() {
 
     try {
       // Acquire local media
-      const stream = await getLocalStream(callType);
+      await getLocalStream(callType);
 
       // Update store
       initiateCall({
@@ -147,13 +147,14 @@ export function useWebRTC() {
         callerName: user.username,
       });
 
-      // Create peer as initiator
-      createPeer(true, stream, targetUserId);
+      // We DO NOT createPeer here anymore. 
+      // We must wait for 'call_accept' from the remote user before sending the WebRTC offer,
+      // otherwise the remote user will miss the offer while they are still ringing.
       setCallStatus('ringing');
     } catch (err) {
       console.error('Failed to start call:', err);
     }
-  }, [socket, user, getLocalStream, initiateCall, createPeer, setCallStatus]);
+  }, [socket, user, getLocalStream, initiateCall, setCallStatus]);
 
   // ── Answer incoming call ─────────────────────────
   const answerCall = useCallback(async () => {
@@ -170,43 +171,20 @@ export function useWebRTC() {
         conversationId: activeCall.conversationId,
       });
 
-      // Create peer as non-initiator
+      // Create peer as non-initiator. 
+      // We will now wait for the caller to send us the WebRTC offer.
       createPeer(false, stream, activeCall.targetUserId);
     } catch (err) {
       console.error('Failed to answer call:', err);
     }
   }, [activeCall, socket, getLocalStream, acceptCall, setCallStatus, createPeer]);
 
-  // ── Reject / Decline call ────────────────────────
-  const rejectCall = useCallback(() => {
-    if (!socket || !activeCall) return;
-
-    socket.emit('call_reject', {
-      targetUserId: activeCall.targetUserId,
-      conversationId: activeCall.conversationId,
-    });
-
-    cleanupCall();
-  }, [socket, activeCall]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── End ongoing call ─────────────────────────────
-  const endOngoingCall = useCallback(() => {
-    if (!socket || !activeCall) return;
-
-    socket.emit('call_end', {
-      targetUserId: activeCall.targetUserId,
-      conversationId: activeCall.conversationId,
-    });
-
-    cleanupCall();
-  }, [socket, activeCall]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Cleanup everything ───────────────────────────
   const cleanupCall = useCallback(() => {
     // Only play disconnect sound if we were actually in a call
     const wasInCall = callStatus === 'in-call';
     if (wasInCall) {
-      // No sound played
+      // No sound played for now
     }
 
     if (peerRef.current) {
@@ -220,6 +198,30 @@ export function useWebRTC() {
     storeEndCall();
   }, [storeEndCall, callStatus]);
 
+  // ── Reject / Decline call ────────────────────────
+  const rejectCall = useCallback(() => {
+    if (!socket || !activeCall) return;
+
+    socket.emit('call_reject', {
+      targetUserId: activeCall.targetUserId,
+      conversationId: activeCall.conversationId,
+    });
+
+    cleanupCall();
+  }, [socket, activeCall, cleanupCall]);
+
+  // ── End ongoing call ─────────────────────────────
+  const endOngoingCall = useCallback(() => {
+    if (!socket || !activeCall) return;
+
+    socket.emit('call_end', {
+      targetUserId: activeCall.targetUserId,
+      conversationId: activeCall.conversationId,
+    });
+
+    cleanupCall();
+  }, [socket, activeCall, cleanupCall]);
+
   // ── Socket event listeners ───────────────────────
   useEffect(() => {
     if (!socket) return;
@@ -227,14 +229,15 @@ export function useWebRTC() {
     // Incoming call
     const handleIncomingCall = (data: {
       conversationId: string;
-      callerId: string;
-      callerName: string;
-      callType: 'audio' | 'video';
+      callerUserId: string;
+      callerInfo: { username: string };
+      type: 'audio' | 'video';
+      callType?: 'audio' | 'video';
     }) => {
       // Reject if already in a call
       if (callStatus !== 'idle') {
         socket.emit('call_reject', {
-          targetUserId: data.callerId,
+          targetUserId: data.callerUserId,
           conversationId: data.conversationId,
           reason: 'busy',
         });
@@ -243,16 +246,22 @@ export function useWebRTC() {
 
       setIncomingCall({
         conversationId: data.conversationId,
-        targetUserId: data.callerId,
-        type: data.callType,
-        callerInfo: { username: data.callerName },
+        targetUserId: data.callerUserId,
+        type: data.callType || data.type,
+        callerInfo: data.callerInfo,
         isIncoming: true,
       });
     };
 
-    // Call accepted by remote
-    const handleCallAccepted = (data: { targetUserId: string }) => {
+    // Call accepted by remote (Caller receives this)
+    const handleCallAccepted = (data: { acceptedBy?: string }) => {
       setCallStatus('connecting');
+      
+      // NOW we create the peer and generate the offer, because the remote user 
+      // is officially listening for our signal.
+      if (localStreamRef.current && activeCall) {
+        createPeer(true, localStreamRef.current, activeCall.targetUserId);
+      }
     };
 
     // Call rejected by remote
@@ -288,24 +297,25 @@ export function useWebRTC() {
       }
     };
 
+    // Note: Use correct backend event names!
     socket.on('call_invite', handleIncomingCall);
-    socket.on('call_accepted', handleCallAccepted);
-    socket.on('call_rejected', handleCallRejected);
-    socket.on('call_ended', handleCallEnded);
+    socket.on('call_accept', handleCallAccepted);
+    socket.on('call_reject', handleCallRejected);
+    socket.on('call_end', handleCallEnded);
     socket.on('webrtc_offer', handleOffer);
     socket.on('webrtc_answer', handleAnswer);
     socket.on('webrtc_ice_candidate', handleIceCandidate);
 
     return () => {
       socket.off('call_invite', handleIncomingCall);
-      socket.off('call_accepted', handleCallAccepted);
-      socket.off('call_rejected', handleCallRejected);
-      socket.off('call_ended', handleCallEnded);
+      socket.off('call_accept', handleCallAccepted);
+      socket.off('call_reject', handleCallRejected);
+      socket.off('call_end', handleCallEnded);
       socket.off('webrtc_offer', handleOffer);
       socket.off('webrtc_answer', handleAnswer);
       socket.off('webrtc_ice_candidate', handleIceCandidate);
     };
-  }, [socket, callStatus, setIncomingCall, setCallStatus, cleanupCall]);
+  }, [socket, callStatus, activeCall, setIncomingCall, setCallStatus, cleanupCall, createPeer]);
 
   return {
     startCall,
