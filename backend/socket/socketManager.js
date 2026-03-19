@@ -2,7 +2,6 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const registerConversationHandlers = require('./conversationSocketHandler');
-const registerCallHandlers = require('./callSocketHandler');
 
 let io;
 
@@ -77,7 +76,6 @@ const initSocket = (server) => {
 
     // Register Modular Handlers
     registerConversationHandlers(io, socket, userSocketMap);
-    registerCallHandlers(io, socket, userSocketMap);
 
     // Listen for graceful websocket disconnects
     socket.on('disconnect', () => {

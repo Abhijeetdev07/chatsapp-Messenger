@@ -38,7 +38,7 @@ api.interceptors.response.use(
           { withCredentials: true }
         );
         
-        const newToken = res.data.token;
+        const newToken = res.data.accessToken;
         
         if (typeof window !== 'undefined') {
            useAuthStore.getState().refreshToken(newToken);

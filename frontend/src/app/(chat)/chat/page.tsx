@@ -15,7 +15,13 @@ export default function ChatPage() {
 
   // Fetch conversations only after auth bootstrap completes
   useEffect(() => {
-    if (authLoading || !isAuthenticated) return;
+    if (authLoading) return;
+    
+    // If bootstrap failed or session is invalid, boot out to login instead of rendering a ghost UI
+    if (!isAuthenticated) {
+      window.location.href = '/login';
+      return;
+    }
 
     const fetchConversations = async () => {
       try {

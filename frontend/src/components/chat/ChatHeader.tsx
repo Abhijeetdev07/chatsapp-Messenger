@@ -1,13 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowLeft, Phone, Video, MoreVertical, Search, PanelRightOpen, Users } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Search, PanelRightOpen, Users } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useConversationStore, Conversation } from '@/store/useConversationStore';
 import { usePresenceStore } from '@/store/usePresenceStore';
 import { useTypingStore } from '@/store/useTypingStore';
 import { useChatLayout } from '@/app/(chat)/layout';
-import { useWebRTC } from '@/hooks/useWebRTC';
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar } from '@/components/ui/Avatar';
 
@@ -21,7 +20,6 @@ export default function ChatHeader({ conversation, onToggleInfo, onToggleSearch 
   const user = useAuthStore((s) => s.user);
   const onlineUsers = usePresenceStore((s) => s.onlineUsers);
   const typingUsers = useTypingStore((s) => s.typingUsers[conversation._id]);
-  const { startCall } = useWebRTC();
   const { openSidebar } = useChatLayout();
 
   // Resolve name & online status
@@ -85,11 +83,6 @@ export default function ChatHeader({ conversation, onToggleInfo, onToggleSearch 
 
   const subtitle = getSubtitle();
 
-  const handleStartCall = (type: 'audio' | 'video') => {
-    if (!otherUser) return;
-    startCall(conversation._id, otherUser._id, type, otherUser.username);
-  };
-
   return (
     <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-surface">
       <div className="flex items-center gap-3 min-w-0">
@@ -133,26 +126,6 @@ export default function ChatHeader({ conversation, onToggleInfo, onToggleSearch 
         >
           <Search className="w-[18px] h-[18px]" />
         </button>
-        {!isGroup && (
-          <>
-            <button
-              onClick={() => handleStartCall('audio')}
-              className="p-2 rounded-lg hover:bg-surface-hover text-foreground/50 hover:text-foreground transition-colors"
-              title="Voice call"
-              aria-label="Start voice call"
-            >
-              <Phone className="w-[18px] h-[18px]" />
-            </button>
-            <button
-              onClick={() => handleStartCall('video')}
-              className="p-2 rounded-lg hover:bg-surface-hover text-foreground/50 hover:text-foreground transition-colors"
-              title="Video call"
-              aria-label="Start video call"
-            >
-              <Video className="w-[18px] h-[18px]" />
-            </button>
-          </>
-        )}
         <button 
           onClick={onToggleInfo} 
           className="p-2 rounded-lg hover:bg-surface-hover text-foreground/50 hover:text-foreground transition-colors" 

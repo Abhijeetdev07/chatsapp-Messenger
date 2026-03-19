@@ -7,7 +7,6 @@ import { useConversationStore } from '@/store/useConversationStore';
 import { useMessageStore } from '@/store/useMessageStore';
 import { usePresenceStore } from '@/store/usePresenceStore';
 import { useTypingStore } from '@/store/useTypingStore';
-import { useCallStore } from '@/store/useCallStore';
 import { useNotifications } from '@/hooks/useNotifications';
 
 /**
@@ -103,36 +102,7 @@ export const useSocket = () => {
     });
 
     // ── Call Signaling Events ────────────────────────────
-    socket.on('call_invite', ({ callerUserId, conversationId, type, callerInfo }: any) => {
-      useCallStore.getState().setIncomingCall({
-        conversationId,
-        targetUserId: callerUserId,
-        type,
-        callerInfo,
-        isIncoming: true,
-      });
-    });
-
-    socket.on('call_accept', () => {
-      useCallStore.getState().setCallStatus('connecting');
-    });
-
-    socket.on('call_reject', () => {
-      useCallStore.getState().endCall();
-    });
-
-    socket.on('call_end', () => {
-      useCallStore.getState().endCall();
-    });
-
-    socket.on('call_busy', () => {
-      useCallStore.getState().endCall();
-    });
-
-    // ── WebRTC Relay Events (handled by the call component) ──
-    // webrtc_offer, webrtc_answer, webrtc_ice_candidate
-    // These are left for the dedicated CallScreen component to handle
-    // as they require direct access to the RTCPeerConnection instance.
+    // (Removed call features)
 
     // Cleanup: remove all listeners safely on unmount
     return () => {
@@ -144,11 +114,6 @@ export const useSocket = () => {
       socket.off('message_deleted');
       socket.off('user_typing');
       socket.off('user_stopped_typing');
-      socket.off('call_invite');
-      socket.off('call_accept');
-      socket.off('call_reject');
-      socket.off('call_end');
-      socket.off('call_busy');
       listenersRegistered.current = false;
     };
   }, [socket]);

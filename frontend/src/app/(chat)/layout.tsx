@@ -1,8 +1,6 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback } from 'react';
-import CallOverlay from '@/components/chat/CallOverlay';
-import IncomingCallModal from '@/components/chat/IncomingCallModal';
 
 interface ChatLayoutContextType {
   isSidebarOpen: boolean;
@@ -31,8 +29,6 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
     <ChatLayoutContext.Provider value={{ isSidebarOpen, openSidebar, closeSidebar, toggleSidebar }}>
       <div className="h-screen flex overflow-hidden bg-background">
         {children}
-        <CallOverlay />
-        <IncomingCallModal />
       </div>
     </ChatLayoutContext.Provider>
   );
