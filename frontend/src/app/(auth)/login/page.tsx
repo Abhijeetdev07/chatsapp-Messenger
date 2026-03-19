@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, MessageCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -19,7 +18,6 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const router = useRouter();
   const login = useAuthStore((s) => s.login);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -36,7 +34,9 @@ export default function LoginPage() {
       const res = await authApi.login(data);
       login(res.user, res.accessToken);
       toast.success('Welcome back!');
-      router.push('/chat');
+      // Hard navigation ensures the browser commits the HttpOnly jwt cookie
+      // before the next request hits the Edge middleware (fixes production redirect)
+      window.location.href = '/chat';
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Login failed');
     }

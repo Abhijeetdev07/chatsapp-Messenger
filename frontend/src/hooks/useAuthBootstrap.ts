@@ -51,7 +51,13 @@ export const useAuthBootstrap = () => {
           {
             method: 'GET',
             credentials: 'include',
-            headers: { Authorization: `Bearer ${newToken}` },
+            headers: {
+              Authorization: `Bearer ${newToken}`,
+              // Prevent 304 Not Modified caching — a cached stale response breaks
+              // auth bootstrap in production since the body is empty on 304.
+              'Cache-Control': 'no-store',
+              'Pragma': 'no-cache',
+            },
           }
         );
 

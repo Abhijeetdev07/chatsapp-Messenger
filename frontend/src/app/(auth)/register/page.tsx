@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, MessageCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -28,7 +27,6 @@ const registerSchema = z.object({
 type RegisterForm = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
-  const router = useRouter();
   const login = useAuthStore((s) => s.login);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -50,7 +48,9 @@ export default function RegisterPage() {
       });
       login(res.user, res.accessToken);
       toast.success('Account created successfully!');
-      router.push('/chat');
+      // Hard navigation ensures the browser commits the HttpOnly jwt cookie
+      // before the next request hits the Edge middleware (fixes production redirect)
+      window.location.href = '/chat';
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Registration failed');
     }
