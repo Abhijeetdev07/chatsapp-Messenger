@@ -41,8 +41,8 @@ const register = async (req, res) => {
       const cookieExpireDays = parseInt(process.env.JWT_COOKIE_EXPIRE_DAYS, 10) || 7;
       res.cookie('jwt', refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+        secure: true,
+        sameSite: 'none',
         maxAge: cookieExpireDays * 24 * 60 * 60 * 1000,
       });
 
@@ -88,8 +88,8 @@ const login = async (req, res) => {
       // Set refresh token in HTTP-only cookie
       res.cookie('jwt', refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+        secure: true,
+        sameSite: 'none',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
@@ -120,6 +120,8 @@ const logout = async (req, res) => {
   try {
     res.cookie('jwt', '', {
       httpOnly: true,
+      secure: true,
+      sameSite: 'none',
       expires: new Date(0),
     });
     res.status(200).json({ success: true, message: 'Logged out successfully' });
