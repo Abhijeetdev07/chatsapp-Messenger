@@ -153,12 +153,12 @@ export default function MessageBubble({ message, isOwn, showSenderName, onReply,
               min-w-[3rem] rounded-2xl relative transition-all duration-300 break-words [overflow-wrap:anywhere]
               ${isHighlighted ? 'ring-2 ring-yellow-400/60 shadow-lg shadow-yellow-400/10' : ''}
               ${isDeleted
-                ? 'bg-surface border border-border italic text-foreground/30 px-4 py-2.5'
+                ? 'bg-surface border border-border italic text-foreground/30 px-2.5 py-1.5'
                 : isOwn
                   ? 'bg-primary-600 text-white rounded-br-md'
                   : 'bg-surface border border-border text-foreground rounded-bl-md'
               }
-              ${!isDeleted && (message.type === 'image' || message.type === 'video') ? 'p-1.5' : !isDeleted ? 'px-4 py-2.5' : ''}
+              ${!isDeleted && (message.type === 'image' || message.type === 'video') ? 'p-1 pb-4' : message.type === 'document' ? 'px-2.5 pt-1.5 pb-5' : 'px-2.5 py-1.5'}
             `}
           >
             {/* Sender name for group chats */}
@@ -233,19 +233,21 @@ export default function MessageBubble({ message, isOwn, showSenderName, onReply,
 
                 {/* Text content (shown below media if both exist) */}
                 {message.content && message.type !== 'document' && (
-                  <p className={`text-[15px] whitespace-pre-wrap break-words leading-relaxed ${(message.type === 'image' || message.type === 'video') ? 'px-2 pt-1.5' : ''}`}>
+                  <p className={`text-[15px] whitespace-pre-wrap break-words leading-relaxed pr-10 mb-0.5 ${(message.type === 'image' || message.type === 'video') ? 'px-2 pt-1.5' : ''}`}>
                     {renderHighlightedText(message.content)}
                   </p>
                 )}
               </>
             )}
-
+ 
             {/* Timestamp & Read Receipt */}
-            <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'} ${(message.type === 'image' || message.type === 'video') && !message.content ? 'px-2 pb-1' : ''}`}>
-              <span className={`text-[10px] ${isOwn ? 'text-white/60' : 'text-foreground/30'}`}>
+            <div className={`absolute bottom-1 right-2 flex items-center justify-end gap-1 mt-0.5 ml-auto w-fit ${(message.type === 'image' || message.type === 'video') && !message.content ? 'pr-1 pb-0.5' : ''}`}>
+              <span className={`text-[9px] leading-none ${isOwn ? 'text-white/60' : 'text-foreground/30'}`}>
                 {time}
               </span>
-              {renderReadReceipt()}
+              <div className="flex-shrink-0 flex animate-fade-in scale-90 -ml-0.5">
+                {renderReadReceipt()}
+              </div>
             </div>
           </div>
 
