@@ -50,6 +50,7 @@ const register = async (req, res) => {
         success: true,
         accessToken,
         user: {
+          _id: user._id,
           id: user._id,
           username: user.username,
           email: user.email,
@@ -96,6 +97,7 @@ const login = async (req, res) => {
         success: true,
         accessToken,
         user: {
+          _id: user._id,
           id: user._id,
           username: user.username,
           email: user.email,
@@ -175,6 +177,7 @@ const getMe = async (req, res) => {
     res.json({
       success: true,
       user: {
+        _id: user._id,
         id: user._id,
         username: user.username,
         email: user.email,
