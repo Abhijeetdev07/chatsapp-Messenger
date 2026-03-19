@@ -64,6 +64,14 @@ export const useSocket = () => {
       useMessageStore.getState().addNewMessage(message.conversationId, message);
       useConversationStore.getState().updateLastMessage(message.conversationId, message);
 
+      // Auto-emit WhatsApp-style delivery receipt instantly
+      if (user && message.sender?._id !== user._id) {
+        socket.emit('message_delivered', {
+          messageId: message._id,
+          conversationId: message.conversationId
+        });
+      }
+
       // Notification & Sound if not from self
       if (user && message.sender?._id !== user._id) {
 
@@ -78,6 +86,10 @@ export const useSocket = () => {
 
     socket.on('message_read_update', ({ messageId, conversationId, readBy }: any) => {
       useMessageStore.getState().updateMessage(conversationId, messageId, { readBy });
+    });
+
+    socket.on('message_delivered_update', ({ messageId, conversationId, deliveredTo }: any) => {
+      useMessageStore.getState().updateMessage(conversationId, messageId, { deliveredTo });
     });
 
     socket.on('message_deleted', ({ messageId, conversationId, deleteForEveryone }: any) => {
@@ -111,6 +123,7 @@ export const useSocket = () => {
       socket.off('status_change');
       socket.off('receive_message');
       socket.off('message_read_update');
+      socket.off('message_delivered_update');
       socket.off('message_deleted');
       socket.off('user_typing');
       socket.off('user_stopped_typing');

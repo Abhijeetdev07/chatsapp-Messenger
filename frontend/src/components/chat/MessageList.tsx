@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { Loader2, ArrowDown } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useMessageStore } from '@/store/useMessageStore';
+import { useSocketStore } from '@/store/useSocketStore';
 import { messageApi } from '@/lib/api/messageApi';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useConversationStore } from '@/store/useConversationStore';
@@ -46,6 +47,27 @@ export default function MessageList({ conversationId, onReply, highlightedMessag
   const scrollToBottom = useCallback((smooth = true) => {
     messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'instant' });
   }, []);
+
+  // Auto-mark messages as read (Double Blue Tick) whenever they render
+  useEffect(() => {
+    if (!messages || messages.length === 0 || !user?._id) return;
+    const socket = useSocketStore.getState().socket;
+    if (!socket) return;
+
+    messages.forEach((msg) => {
+      // If message is from someone else AND we haven't read it yet
+      if (
+        msg.sender?._id !== user._id && 
+        msg.sender !== user._id && 
+        !msg.readBy?.some((r: any) => r.user === user._id)
+      ) {
+        socket.emit('message_read', {
+          messageId: msg._id,
+          conversationId: msg.conversationId
+        });
+      }
+    });
+  }, [messages, user?._id]);
 
   // Initial fetch
   useEffect(() => {

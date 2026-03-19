@@ -60,7 +60,8 @@ const sendMessage = async (req, res) => {
       mediaUrl: mediaUrl || '',
       mediaType: mediaType || '',
       replyTo: replyTo || null,
-      readBy: [{ user: req.user._id, readAt: Date.now() }]
+      readBy: [{ user: req.user._id, readAt: Date.now() }],
+      deliveredTo: [{ user: req.user._id, deliveredAt: Date.now() }]
     });
 
     const populatedMessage = await newMessage.populate('sender', 'username avatar');

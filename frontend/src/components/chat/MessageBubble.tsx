@@ -111,11 +111,19 @@ export default function MessageBubble({ message, isOwn, showSenderName, onReply,
   const renderReadReceipt = () => {
     if (!isOwn || isDeleted) return null;
     const readCount = message.readBy?.length || 0;
+    const deliveredCount = message.deliveredTo?.length || 0;
+
     if (readCount > 1) {
-      // Read by at least one other person
+      // Read by at least one other person (Double Blue Check)
       return <CheckCheck className="w-3.5 h-3.5 text-sky-300" />;
     }
-    // Sent / delivered (single check)
+    
+    if (deliveredCount > 1) {
+      // Delivered to at least one other person (Double Gray Check)
+      return <CheckCheck className="w-3.5 h-3.5 text-white/50" />;
+    }
+
+    // Sent but not yet delivered (Single Gray Check)
     return <Check className="w-3.5 h-3.5 text-white/50" />;
   };
 

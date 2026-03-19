@@ -11,6 +11,17 @@ const readBySchema = new mongoose.Schema({
   }
 }, { _id: false });
 
+const deliveredToSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  },
+  deliveredAt: {
+    type: Date,
+    default: Date.now,
+  }
+}, { _id: false });
+
 const messageSchema = new mongoose.Schema({
   conversationId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -44,6 +55,7 @@ const messageSchema = new mongoose.Schema({
     ref: 'Message',
   },
   readBy: [readBySchema],
+  deliveredTo: [deliveredToSchema],
   deletedFor: [
     {
       type: mongoose.Schema.Types.ObjectId,

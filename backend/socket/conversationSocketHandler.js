@@ -76,7 +76,8 @@ module.exports = (io, socket, userSocketMap) => {
         mediaUrl: mediaUrl || '',
         mediaType: mediaType || '',
         replyTo: replyTo || null,
-        readBy: [{ user: userId, readAt: Date.now() }]
+        readBy: [{ user: userId, readAt: Date.now() }],
+        deliveredTo: [{ user: userId, deliveredAt: Date.now() }]
       });
 
       const populatedMessage = await newMessage.populate('sender', 'username avatar');
@@ -115,6 +116,27 @@ module.exports = (io, socket, userSocketMap) => {
       }
     } catch (err) {
       console.error('message_read Error:', err);
+    }
+  });
+
+  // message_delivered
+  socket.on('message_delivered', async ({ messageId, conversationId }) => {
+    try {
+      const message = await Message.findById(messageId);
+      if (!message || message.conversationId.toString() !== conversationId) return;
+
+      if (!message.deliveredTo.some(r => r.user.toString() === userId)) {
+        message.deliveredTo.push({ user: userId, deliveredAt: Date.now() });
+        await message.save();
+
+        // Emit update to the original sender so they see delivery receipts (double gray ticks)
+        const senderSockets = Array.from(userSocketMap.get(message.sender.toString()) || []);
+        senderSockets.forEach(id => {
+          io.to(id).emit('message_delivered_update', { messageId, conversationId, deliveredTo: message.deliveredTo });
+        });
+      }
+    } catch (err) {
+      console.error('message_delivered Error:', err);
     }
   });
 

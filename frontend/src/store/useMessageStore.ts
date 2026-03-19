@@ -9,6 +9,7 @@ export interface Message {
   mediaUrl?: string;
   mediaType?: string;
   replyTo?: any;
+  deliveredTo: any[];
   readBy: any[];
   deletedFor: string[];
   deletedForEveryone: boolean;
