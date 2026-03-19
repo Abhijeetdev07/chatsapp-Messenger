@@ -34,8 +34,11 @@ export default function LoginPage() {
       const res = await authApi.login(data);
       login(res.user, res.accessToken);
       toast.success('Welcome back!');
-      // Hard navigation ensures the browser commits the HttpOnly jwt cookie
-      // before the next request hits the Edge middleware (fixes production redirect)
+      // Set a frontend-domain marker cookie so the Edge Middleware can detect auth.
+      // The real security is enforced by the backend's HttpOnly jwt cookie.
+      // In production (cross-origin), the backend cookie is invisible to middleware.
+      document.cookie = 'chatup_auth=1; path=/; max-age=604800; SameSite=Lax';
+      // Hard navigation flushes the cookie before the next request hits middleware
       window.location.href = '/chat';
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Login failed');

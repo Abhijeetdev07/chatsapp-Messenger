@@ -39,12 +39,17 @@ export const useAuthStore = create<AuthState>((set) => ({
     isLoading: false
   }),
   
-  logout: () => set({ 
-    user: null, 
-    accessToken: null, 
-    isAuthenticated: false,
-    isLoading: false
-  }),
+  logout: () => {
+    if (typeof document !== 'undefined') {
+      document.cookie = 'chatup_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+    }
+    set({ 
+      user: null, 
+      accessToken: null, 
+      isAuthenticated: false,
+      isLoading: false
+    });
+  },
   
   setUser: (user) => set({ user }),
   

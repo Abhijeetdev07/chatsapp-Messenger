@@ -39,7 +39,9 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     });
 
     socketInstance.on('connect_error', (error) => {
-      console.error('Socket Handshake Auth Error:', error.message);
+      // Note: "xhr poll error" just means the backend is temporarily unreachable
+      // (e.g. nodemon restarted, or waking up from sleep in production).
+      console.error('Socket connection error:', error.message);
     });
 
     set({ socket: socketInstance });
