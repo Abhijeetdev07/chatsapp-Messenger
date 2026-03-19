@@ -242,7 +242,7 @@ export default function MessageBubble({ message, isOwn, showSenderName, onReply,
  
             {/* Timestamp & Read Receipt */}
             <div className={`absolute bottom-1 right-2 flex items-center justify-end gap-1 mt-0.5 ml-auto w-fit ${(message.type === 'image' || message.type === 'video') && !message.content ? 'pr-1 pb-0.5' : ''}`}>
-              <span className={`text-[9px] leading-none ${isOwn ? 'text-white/60' : 'text-foreground/30'}`}>
+              <span className={`text-[11px] leading-none ${isOwn ? 'text-white/60' : 'text-foreground/30'}`}>
                 {time}
               </span>
               <div className="flex-shrink-0 flex animate-fade-in scale-90 -ml-0.5">
