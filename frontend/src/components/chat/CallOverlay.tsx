@@ -122,114 +122,117 @@ export default function CallOverlay() {
     );
   }
 
-  // ── Full Screen Audio/Video Overlay ──
+  // ── Full Screen (Mobile) / Centered Modal (Desktop) Audio/Video Overlay ──
   const isVideoRendered = activeCall.type === 'video';
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#111111] flex flex-col md:flex-row overflow-hidden animate-fade-in relative">
-      
-      {/* Background / Remote Video (Large view) */}
-      <div className="flex-1 relative flex items-center justify-center bg-black">
-        {remoteStream && isVideoRendered ? (
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className="w-full h-full object-contain"
-          />
-        ) : (
-          /* Avatar fallback if audio or video off */
-          <div className="flex flex-col items-center">
-            <div className={`w-36 h-36 rounded-full bg-primary-900 flex items-center justify-center text-white text-5xl mb-6 shadow-2xl ${callStatus === 'ringing' || callStatus === 'connecting' ? 'animate-pulse' : ''}`}>
-              {activeCall.callerInfo?.username?.charAt(0).toUpperCase() || '?'}
-            </div>
-            <h2 className="text-3xl font-bold text-white mb-2">
-              {activeCall.callerInfo?.username || 'Unknown User'}
-            </h2>
-            <p className="text-white/60 text-lg">
-              {callStatus === 'ringing' && 'Ringing...'}
-              {callStatus === 'connecting' && 'Connecting...'}
-              {callStatus === 'in-call' && <span className="font-mono tracking-widest text-[#4ade80]">{formatDuration(duration)}</span>}
-            </p>
-          </div>
-        )}
-
-        {/* Local Video (Picture-in-Picture) */}
-        {localStream && isVideoRendered && !isCameraOff && (
-          <div className="absolute top-6 right-6 w-32 md:w-48 aspect-[3/4] md:aspect-video bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-white/10 z-10 transition-all hover:scale-105 cursor-move">
+    <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-0 md:p-6 animate-fade-in">
+      {/* Inner Container: Full screen on mobile, bounded center modal on desktop */}
+      <div className="w-full h-full md:max-w-5xl md:max-h-[85vh] md:rounded-[2rem] bg-[#111111] flex flex-col overflow-hidden relative shadow-2xl ring-1 ring-white/10">
+        
+        {/* Background / Remote Video (Large view) */}
+        <div className="flex-1 relative flex items-center justify-center bg-black overflow-hidden">
+          {remoteStream && isVideoRendered ? (
             <video
-              ref={localVideoRef}
+              ref={remoteVideoRef}
               autoPlay
               playsInline
-              muted
-              className={`w-full h-full object-cover transition-transform ${
-                /* Mirror front camera horizontally */
-                localStream.getVideoTracks()[0]?.getSettings().facingMode !== 'environment' ? 'scale-x-[-1]' : ''
-              }`}
+              className="w-full h-full object-contain"
             />
-          </div>
-        )}
+          ) : (
+            /* Avatar fallback if audio or video off */
+            <div className="flex flex-col items-center">
+              <div className={`w-36 h-36 rounded-full bg-primary-900 flex items-center justify-center text-white text-5xl mb-6 shadow-2xl ${callStatus === 'ringing' || callStatus === 'connecting' ? 'animate-pulse' : ''}`}>
+                {activeCall.callerInfo?.username?.charAt(0).toUpperCase() || '?'}
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-2">
+                {activeCall.callerInfo?.username || 'Unknown User'}
+              </h2>
+              <p className="text-white/60 text-lg">
+                {callStatus === 'ringing' && 'Ringing...'}
+                {callStatus === 'connecting' && 'Connecting...'}
+                {callStatus === 'in-call' && <span className="font-mono tracking-widest text-[#4ade80]">{formatDuration(duration)}</span>}
+              </p>
+            </div>
+          )}
 
-        {/* Top bar controls */}
-        <div className="absolute top-6 left-6 z-10">
+          {/* Local Video (Picture-in-Picture) */}
+          {localStream && isVideoRendered && !isCameraOff && (
+            <div className="absolute top-6 right-6 w-28 md:w-48 aspect-[3/4] md:aspect-video bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-white/10 z-10 transition-transform hover:scale-105 cursor-default">
+              <video
+                ref={localVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`w-full h-full object-cover ${
+                  /* Mirror front camera horizontally */
+                  localStream.getVideoTracks()[0]?.getSettings().facingMode !== 'environment' ? 'scale-x-[-1]' : ''
+                }`}
+              />
+            </div>
+          )}
+
+          {/* Top bar controls (Minimize) */}
+          <div className="absolute top-6 left-6 z-10">
+            <button
+              onClick={() => setIsMinimized(true)}
+              className="p-3 rounded-full bg-black/40 hover:bg-black/60 text-white backdrop-blur-md transition-colors shadow-lg border border-white/10 mx-2 my-2"
+              title="Minimize call"
+            >
+              <Minimize2 className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Control Bar (Absolute at bottom) */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/60 backdrop-blur-xl border border-white/10 px-8 py-4 rounded-full shadow-2xl z-20">
+          
+          {/* Mute */}
           <button
-            onClick={() => setIsMinimized(true)}
-            className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors shadow-lg"
-            title="Minimize call"
+            onClick={toggleMute}
+            className={`p-4 rounded-full transition-all flex items-center justify-center ${
+              isMuted ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-white text-gray-900 hover:bg-gray-200'
+            }`}
+            title={isMuted ? 'Unmute' : 'Mute'}
           >
-            <Minimize2 className="w-5 h-5" />
+            {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+          </button>
+
+          {/* Video Toggle (only for video calls) */}
+          {isVideoRendered && (
+            <button
+              onClick={toggleCamera}
+              className={`p-4 rounded-full transition-all flex items-center justify-center ${
+                isCameraOff ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-white text-gray-900 hover:bg-gray-200'
+              }`}
+              title={isCameraOff ? 'Turn on camera' : 'Turn off camera'}
+            >
+              {isCameraOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
+            </button>
+          )}
+
+          {/* Switch Camera (Mobile only via facingMode) */}
+          {isVideoRendered && navigator.mediaDevices.getSupportedConstraints().facingMode && (
+            <button
+              onClick={handleSwitchCamera}
+              className="hidden md:flex p-4 rounded-full bg-white/20 text-white hover:bg-white/30 transition-all items-center justify-center"
+              title="Switch camera"
+            >
+              <SwitchCamera className="w-6 h-6" />
+            </button>
+          )}
+
+          {/* End Call */}
+          <button
+            onClick={endCall}
+            className="p-4 rounded-full bg-red-500 hover:bg-red-600 text-white transition-all shadow-lg shadow-red-500/20 hover:scale-105 ml-2 flex items-center justify-center"
+            title="End Call"
+          >
+            <PhoneOff className="w-7 h-7" />
           </button>
         </div>
+
       </div>
-
-      {/* Control Bar (Bottom block/bar) */}
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 md:gap-6 bg-white/10 backdrop-blur-xl border border-white/10 px-8 py-4 rounded-3xl shadow-2xl z-20">
-        
-        {/* Mute */}
-        <button
-          onClick={toggleMute}
-          className={`p-4 rounded-full transition-all flex items-center justify-center ${
-            isMuted ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-white text-gray-900 hover:bg-gray-200'
-          }`}
-          title={isMuted ? 'Unmute' : 'Mute'}
-        >
-          {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-        </button>
-
-        {/* Video Toggle (only for video calls) */}
-        {isVideoRendered && (
-          <button
-            onClick={toggleCamera}
-            className={`p-4 rounded-full transition-all flex items-center justify-center ${
-              isCameraOff ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-white text-gray-900 hover:bg-gray-200'
-            }`}
-            title={isCameraOff ? 'Turn on camera' : 'Turn off camera'}
-          >
-            {isCameraOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
-          </button>
-        )}
-
-        {/* Switch Camera (Mobile only via facingMode) */}
-        {isVideoRendered && navigator.mediaDevices.getSupportedConstraints().facingMode && (
-          <button
-            onClick={handleSwitchCamera}
-            className="hidden md:flex p-4 rounded-full bg-white/20 text-white hover:bg-white/30 transition-all items-center justify-center"
-            title="Switch camera"
-          >
-            <SwitchCamera className="w-6 h-6" />
-          </button>
-        )}
-
-        {/* End Call */}
-        <button
-          onClick={endCall}
-          className="p-4 rounded-full bg-red-500 hover:bg-red-600 text-white transition-all shadow-lg shadow-red-500/20 hover:scale-105 ml-2 flex items-center justify-center"
-          title="End Call"
-        >
-          <PhoneOff className="w-7 h-7" />
-        </button>
-      </div>
-
     </div>
   );
 }
