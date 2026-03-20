@@ -163,6 +163,7 @@ export default function MessageInput({ conversationId, replyTo, onCancelReply }:
         mediaUrl: tempUrl,
         mediaType: 'audio',
         optimisticStatus: 'uploading',
+        localBlob: blob,
         replyTo: null,
         deliveredTo: [],
         readBy: [],

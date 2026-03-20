@@ -10,6 +10,7 @@ export interface Message {
   mediaUrl?: string;
   mediaType?: string;
   optimisticStatus?: 'uploading' | 'sending' | 'failed';
+  localBlob?: Blob;
   replyTo?: any;
   deliveredTo: any[];
   readBy: any[];

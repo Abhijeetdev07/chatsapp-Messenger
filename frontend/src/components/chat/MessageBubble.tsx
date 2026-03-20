@@ -2,9 +2,11 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import { Check, CheckCheck, Copy, Reply, Trash2, Clock } from 'lucide-react';
+import { Check, CheckCheck, Copy, Reply, Trash2, Clock, AlertCircle } from 'lucide-react';
 import { Message } from '@/store/useMessageStore';
 import { useSocketStore } from '@/store/useSocketStore';
+import { useMessageStore } from '@/store/useMessageStore';
+import { uploadApi } from '@/lib/api/uploadApi';
 import toast from 'react-hot-toast';
 
 interface MessageBubbleProps {
@@ -21,6 +23,7 @@ export default function MessageBubble({ message, isOwn, showSenderName, onReply,
   const time = format(new Date(message.createdAt), 'HH:mm');
   const senderName = typeof message.sender === 'object' ? message.sender?.username : null;
   const bubbleRef = useRef<HTMLDivElement>(null);
+  const updateMessage = useMessageStore((s) => s.updateMessage);
 
   // Auto-scroll to highlighted message
   useEffect(() => {
@@ -103,6 +106,49 @@ export default function MessageBubble({ message, isOwn, showSenderName, onReply,
       deleteForEveryone: forEveryone,
     });
     setShowContextMenu(false);
+  };
+
+  const handleRetry = async () => {
+    if (!isOwn) return;
+    if (message.type !== 'audio') return;
+    if (message.optimisticStatus !== 'failed') return;
+    if (!message.localBlob) {
+      toast.error('Retry not available');
+      return;
+    }
+
+    const socket = useSocketStore.getState().socket;
+    if (!socket) {
+      toast.error('Not connected');
+      return;
+    }
+
+    const clientId = message.clientId || message._id;
+
+    try {
+      updateMessage(message.conversationId, message._id, { optimisticStatus: 'uploading' });
+      const file = new File([message.localBlob], `voice_${Date.now()}.webm`, { type: 'audio/webm' });
+      const res = await uploadApi.uploadFile(file);
+
+      if (!res?.success) {
+        updateMessage(message.conversationId, message._id, { optimisticStatus: 'failed' });
+        toast.error('Failed to upload');
+        return;
+      }
+
+      updateMessage(message.conversationId, message._id, { optimisticStatus: 'sending', mediaUrl: res.url || res.mediaUrl });
+      socket.emit('send_message', {
+        conversationId: message.conversationId,
+        type: 'audio',
+        content: '',
+        mediaUrl: res.url || res.mediaUrl,
+        mediaType: 'audio',
+        clientId,
+      });
+    } catch {
+      updateMessage(message.conversationId, message._id, { optimisticStatus: 'failed' });
+      toast.error('Retry failed');
+    }
   };
 
   // Read receipt icon
@@ -200,6 +246,15 @@ export default function MessageBubble({ message, isOwn, showSenderName, onReply,
               <span className={`text-[11px] leading-none ${isOwn ? 'text-white/60' : 'text-foreground/30'}`}>
                 {time}
               </span>
+              {isOwn && message.optimisticStatus === 'failed' && message.type === 'audio' && (
+                <button
+                  onClick={handleRetry}
+                  className="p-0.5 rounded hover:bg-white/10 text-red-300 hover:text-red-200 transition-colors"
+                  title="Retry"
+                >
+                  <AlertCircle className="w-3.5 h-3.5" />
+                </button>
+              )}
               <div className="flex-shrink-0 flex animate-fade-in scale-90 -ml-0.5">
                 {renderReadReceipt()}
               </div>
