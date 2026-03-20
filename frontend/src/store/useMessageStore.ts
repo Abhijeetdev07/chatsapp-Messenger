@@ -2,12 +2,14 @@ import { create } from 'zustand';
 
 export interface Message {
   _id: string;
+  clientId?: string;
   conversationId: string;
   sender: any;
   type: string;
   content: string;
   mediaUrl?: string;
   mediaType?: string;
+  optimisticStatus?: 'uploading' | 'sending' | 'failed';
   replyTo?: any;
   deliveredTo: any[];
   readBy: any[];
@@ -25,6 +27,7 @@ interface MessageState {
   setMessages: (conversationId: string, messages: Message[], hasMore: boolean) => void;
   appendMessages: (conversationId: string, olderMessages: Message[], hasMore: boolean) => void;
   addNewMessage: (conversationId: string, message: Message) => void;
+  reconcileMessageByClientId: (conversationId: string, clientId: string, serverMessage: Message) => void;
   updateMessage: (conversationId: string, messageId: string, updates: Partial<Message>) => void;
   removeMessage: (conversationId: string, messageId: string) => void;
   setLoading: (loading: boolean) => void;
@@ -57,6 +60,24 @@ export const useMessageStore = create<MessageState>((set) => ({
     // Append to end
     return {
       messages: { ...state.messages, [conversationId]: [...existing, message] }
+    };
+  }),
+
+  reconcileMessageByClientId: (conversationId, clientId, serverMessage) => set((state) => {
+    const existing = state.messages[conversationId] || [];
+
+    const idx = existing.findIndex((m) => m.clientId === clientId || m._id === clientId);
+    if (idx === -1) {
+      if (existing.some((m) => m._id === serverMessage._id)) return state;
+      return {
+        messages: { ...state.messages, [conversationId]: [...existing, serverMessage] }
+      };
+    }
+
+    const next = [...existing];
+    next[idx] = { ...serverMessage, optimisticStatus: undefined };
+    return {
+      messages: { ...state.messages, [conversationId]: next }
     };
   }),
 

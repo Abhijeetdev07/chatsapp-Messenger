@@ -62,7 +62,7 @@ module.exports = (io, socket, userSocketMap) => {
   // send_message
   socket.on('send_message', async (messageData) => {
     try {
-      const { conversationId, type, content, mediaUrl, mediaType, replyTo } = messageData;
+      const { conversationId, type, content, mediaUrl, mediaType, replyTo, clientId } = messageData;
 
       const conversation = await Conversation.findById(conversationId);
       if (!conversation || !conversation.participants.includes(userId)) return;
@@ -85,6 +85,7 @@ module.exports = (io, socket, userSocketMap) => {
         sender: userId,
         type: normalizedType,
         content: content || '',
+        clientId: clientId || '',
         mediaUrl: normalizedType === 'audio' ? (mediaUrl || '') : '',
         mediaType: normalizedType === 'audio' ? (mediaType || 'audio') : '',
         replyTo: replyTo || null,

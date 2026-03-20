@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import { Check, CheckCheck, Copy, Reply, Trash2 } from 'lucide-react';
+import { Check, CheckCheck, Copy, Reply, Trash2, Clock } from 'lucide-react';
 import { Message } from '@/store/useMessageStore';
 import { useSocketStore } from '@/store/useSocketStore';
 import toast from 'react-hot-toast';
@@ -108,6 +108,12 @@ export default function MessageBubble({ message, isOwn, showSenderName, onReply,
   // Read receipt icon
   const renderReadReceipt = () => {
     if (!isOwn || isDeleted) return null;
+    if (message.optimisticStatus === 'uploading' || message.optimisticStatus === 'sending') {
+      return <Clock className="w-3.5 h-3.5 text-white/50" />;
+    }
+    if (message.optimisticStatus === 'failed') {
+      return null;
+    }
     const readCount = message.readBy?.length || 0;
     const deliveredCount = message.deliveredTo?.length || 0;
 

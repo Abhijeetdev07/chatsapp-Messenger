@@ -42,6 +42,10 @@ const messageSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  clientId: {
+    type: String,
+    default: '',
+  },
   mediaUrl: {
     type: String, // Cloudinary URL for media
     default: '',

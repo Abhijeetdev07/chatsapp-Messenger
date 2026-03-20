@@ -6,7 +6,8 @@ import EmojiPicker, { Theme } from 'emoji-picker-react';
 import { useSocketStore } from '@/store/useSocketStore';
 import { useTyping } from '@/hooks/useTyping';
 import { uploadApi } from '@/lib/api/uploadApi';
-import { Message } from '@/store/useMessageStore';
+import { Message, useMessageStore } from '@/store/useMessageStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import toast from 'react-hot-toast';
 
 interface MessageInputProps {
@@ -18,6 +19,9 @@ interface MessageInputProps {
 export default function MessageInput({ conversationId, replyTo, onCancelReply }: MessageInputProps) {
   const socket = useSocketStore((s) => s.socket);
   const { handleTyping, stopTyping } = useTyping();
+  const user = useAuthStore((s) => s.user);
+  const addNewMessage = useMessageStore((s) => s.addNewMessage);
+  const updateMessage = useMessageStore((s) => s.updateMessage);
 
   const [message, setMessage] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
@@ -144,22 +148,48 @@ export default function MessageInput({ conversationId, replyTo, onCancelReply }:
 
   const sendVoiceNote = async (blob: Blob) => {
     if (!socket) return;
+    const clientId = `local_${Date.now()}_${Math.random().toString(16).slice(2)}`;
     try {
       setIsUploading(true);
+      const tempUrl = URL.createObjectURL(blob);
+
+      addNewMessage(conversationId, {
+        _id: clientId,
+        clientId,
+        conversationId,
+        sender: user || { _id: 'me' },
+        type: 'audio',
+        content: '',
+        mediaUrl: tempUrl,
+        mediaType: 'audio',
+        optimisticStatus: 'uploading',
+        replyTo: null,
+        deliveredTo: [],
+        readBy: [],
+        deletedFor: [],
+        deletedForEveryone: false,
+        createdAt: new Date().toISOString(),
+      } as any);
+
       const file = new File([blob], `voice_${Date.now()}.webm`, { type: 'audio/webm' });
       const res = await uploadApi.uploadFile(file);
 
       if (res.success) {
+        updateMessage(conversationId, clientId, { optimisticStatus: 'sending', mediaUrl: res.url || res.mediaUrl });
         socket.emit('send_message', {
           conversationId,
           type: 'audio',
           content: '',
           mediaUrl: res.url || res.mediaUrl,
           mediaType: 'audio',
+          clientId,
         });
+      } else {
+        updateMessage(conversationId, clientId, { optimisticStatus: 'failed' });
       }
     } catch {
       toast.error('Failed to send voice note');
+      updateMessage(conversationId, clientId, { optimisticStatus: 'failed' });
     } finally {
       setIsUploading(false);
       setRecordingDuration(0);

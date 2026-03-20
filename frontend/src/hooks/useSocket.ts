@@ -61,7 +61,11 @@ export const useSocket = () => {
 
     // ── Messaging Events ─────────────────────────────────
     socket.on('receive_message', (message: any) => {
-      useMessageStore.getState().addNewMessage(message.conversationId, message);
+      if (message?.clientId) {
+        useMessageStore.getState().reconcileMessageByClientId(message.conversationId, message.clientId, message);
+      } else {
+        useMessageStore.getState().addNewMessage(message.conversationId, message);
+      }
       useConversationStore.getState().updateLastMessage(message.conversationId, message);
 
       // Auto-emit WhatsApp-style delivery receipt instantly

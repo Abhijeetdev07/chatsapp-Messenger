@@ -45,7 +45,7 @@ const getMessages = async (req, res) => {
 // @access  Private
 const sendMessage = async (req, res) => {
   try {
-    const { conversationId, type, content, mediaUrl, mediaType, replyTo } = req.body;
+    const { conversationId, type, content, mediaUrl, mediaType, replyTo, clientId } = req.body;
 
     const normalizedType = (type || 'text').toString();
     const allowedTypes = new Set(['text', 'audio', 'system']);
@@ -67,6 +67,7 @@ const sendMessage = async (req, res) => {
       sender: req.user._id,
       type: normalizedType,
       content: content || '',
+      clientId: clientId || '',
       mediaUrl: normalizedType === 'audio' ? (mediaUrl || '') : '',
       mediaType: normalizedType === 'audio' ? (mediaType || 'audio') : '',
       replyTo: replyTo || null,
