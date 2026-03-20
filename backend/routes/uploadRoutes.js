@@ -24,22 +24,18 @@ router.post('/', protect, (req, res, next) => {
     }
 
     const { mimetype, size, buffer } = req.file;
-    let resourceType = 'auto';
 
-    // Type-specific size enforcement
-    if (mimetype.startsWith('image/')) {
-      if (size > 10 * 1024 * 1024) return res.status(400).json({ success: false, message: 'Image exceeds 10MB limit.' });
-      resourceType = 'image';
-    } else if (mimetype.startsWith('video/')) {
-      if (size > 100 * 1024 * 1024) return res.status(400).json({ success: false, message: 'Video exceeds 100MB limit.' });
-      resourceType = 'video';
-    } else if (mimetype.startsWith('audio/')) {
-      if (size > 50 * 1024 * 1024) return res.status(400).json({ success: false, message: 'Audio exceeds 50MB limit.' });
-      resourceType = 'video'; // In Cloudinary, audio is processed as video
-    } else {
-      if (size > 50 * 1024 * 1024) return res.status(400).json({ success: false, message: 'File exceeds 50MB limit.' });
-      resourceType = 'raw';
+    // Only allow voice-note audio uploads
+    if (!mimetype.startsWith('audio/')) {
+      return res.status(400).json({ success: false, message: 'Only audio uploads are supported' });
     }
+
+    if (size > 50 * 1024 * 1024) {
+      return res.status(400).json({ success: false, message: 'Audio exceeds 50MB limit.' });
+    }
+
+    // In Cloudinary, audio is processed as video
+    const resourceType = 'video';
 
     // Attempt upload buffer to Cloudinary
     const result = await uploadToCloudinary(buffer, 'chatup_uploads', resourceType);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Send, Paperclip, Smile, X, Loader2, Image, FileText, Mic, MicOff, Reply } from 'lucide-react';
+import { Send, Smile, X, Mic } from 'lucide-react';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import { useSocketStore } from '@/store/useSocketStore';
 import { useTyping } from '@/hooks/useTyping';
@@ -15,21 +15,13 @@ interface MessageInputProps {
   onCancelReply?: () => void;
 }
 
-interface FilePreview {
-  file: File;
-  url: string;
-  type: 'image' | 'video' | 'document';
-}
-
 export default function MessageInput({ conversationId, replyTo, onCancelReply }: MessageInputProps) {
   const socket = useSocketStore((s) => s.socket);
   const { handleTyping, stopTyping } = useTyping();
 
   const [message, setMessage] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
-  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
 
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -55,13 +47,7 @@ export default function MessageInput({ conversationId, replyTo, onCancelReply }:
 
   // ─── Send Text Message ──────────────────────────────
   const handleSend = useCallback(() => {
-    if ((!message.trim() && !filePreview) || !socket) return;
-
-    // If there's a file preview, upload and send as media
-    if (filePreview) {
-      handleSendFile();
-      return;
-    }
+    if (!message.trim() || !socket) return;
 
     socket.emit('send_message', {
       conversationId,
@@ -75,56 +61,7 @@ export default function MessageInput({ conversationId, replyTo, onCancelReply }:
     onCancelReply?.();
 
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
-  }, [message, filePreview, socket, conversationId, replyTo]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ─── Send File ──────────────────────────────────────
-  const handleSendFile = async () => {
-    if (!filePreview || !socket) return;
-
-    try {
-      setIsUploading(true);
-      const res = await uploadApi.uploadFile(filePreview.file);
-
-      if (res.success) {
-        socket.emit('send_message', {
-          conversationId,
-          type: filePreview.type,
-          content: message.trim() || '',
-          mediaUrl: res.url || res.mediaUrl,
-          mediaType: filePreview.type,
-          replyTo: replyTo?._id || null,
-        });
-      }
-    } catch {
-      toast.error('File upload failed');
-    } finally {
-      setIsUploading(false);
-      clearFilePreview();
-      setMessage('');
-      onCancelReply?.();
-    }
-  };
-
-  // ─── File Selection ─────────────────────────────────
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video' | 'document') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setShowAttachMenu(false);
-
-    if (type === 'document') {
-      setFilePreview({ file, url: '', type: 'document' });
-    } else {
-      const url = URL.createObjectURL(file);
-      const detectedType = file.type.startsWith('video') ? 'video' : 'image';
-      setFilePreview({ file, url, type: detectedType });
-    }
-  };
-
-  const clearFilePreview = () => {
-    if (filePreview?.url) URL.revokeObjectURL(filePreview.url);
-    setFilePreview(null);
-  };
+  }, [message, socket, conversationId, replyTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Emoji ──────────────────────────────────────────
   const handleEmojiClick = (emojiData: any) => {
@@ -235,7 +172,7 @@ export default function MessageInput({ conversationId, replyTo, onCancelReply }:
     return `${m}:${s}`;
   };
 
-  const hasContent = message.trim().length > 0 || filePreview !== null;
+  const hasContent = message.trim().length > 0;
 
   return (
     <div className="border-t border-border bg-surface relative">
@@ -254,32 +191,6 @@ export default function MessageInput({ conversationId, replyTo, onCancelReply }:
           <button onClick={onCancelReply} className="p-1 rounded hover:bg-surface-hover text-foreground/40 hover:text-foreground transition-colors">
             <X className="w-4 h-4" />
           </button>
-        </div>
-      )}
-
-      {/* File Preview */}
-      {filePreview && (
-        <div className="px-4 pt-3 pb-1">
-          <div className="relative inline-block rounded-xl overflow-hidden border border-border bg-background">
-            {filePreview.type === 'image' && (
-              <img src={filePreview.url} alt="Preview" className="max-h-32 max-w-48 object-cover" />
-            )}
-            {filePreview.type === 'video' && (
-              <video src={filePreview.url} className="max-h-32 max-w-48 object-cover" />
-            )}
-            {filePreview.type === 'document' && (
-              <div className="flex items-center gap-2 px-4 py-3">
-                <FileText className="w-5 h-5 text-primary-500" />
-                <span className="text-sm text-foreground truncate max-w-[150px]">{filePreview.file.name}</span>
-              </div>
-            )}
-            <button
-              onClick={clearFilePreview}
-              className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </div>
         </div>
       )}
 
@@ -309,35 +220,6 @@ export default function MessageInput({ conversationId, replyTo, onCancelReply }:
       ) : (
         /* Main Input Area */
         <div className="px-4 py-3">
-          {/* Attachment Menu */}
-          {showAttachMenu && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowAttachMenu(false)} />
-              <div className="absolute bottom-full left-4 mb-2 bg-surface border border-border rounded-xl shadow-xl shadow-black/20 z-50 py-2 px-1 animate-slide-up">
-                <label className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/80 hover:bg-surface-hover rounded-lg cursor-pointer transition-colors">
-                  <Image className="w-4 h-4 text-green-400" />
-                  Photo / Video
-                  <input
-                    type="file"
-                    accept="image/*,video/*"
-                    className="hidden"
-                    onChange={(e) => handleFileSelect(e, 'image')}
-                  />
-                </label>
-                <label className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/80 hover:bg-surface-hover rounded-lg cursor-pointer transition-colors">
-                  <FileText className="w-4 h-4 text-blue-400" />
-                  Document
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.zip"
-                    className="hidden"
-                    onChange={(e) => handleFileSelect(e, 'document')}
-                  />
-                </label>
-              </div>
-            </>
-          )}
-
           {/* Emoji Picker */}
           {showEmoji && (
             <div ref={emojiRef} className="absolute bottom-full left-4 mb-2 z-50 animate-slide-up">
@@ -353,21 +235,6 @@ export default function MessageInput({ conversationId, replyTo, onCancelReply }:
           )}
 
           <div className="flex items-end gap-2">
-            {/* Attach */}
-            <button
-              onClick={() => { setShowAttachMenu(!showAttachMenu); setShowEmoji(false); }}
-              disabled={isUploading}
-              className="p-2.5 rounded-xl hover:bg-surface-hover text-foreground/50 hover:text-foreground transition-colors flex-shrink-0 disabled:opacity-50"
-            >
-              {isUploading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-primary-500" />
-              ) : showAttachMenu ? (
-                <X className="w-5 h-5" />
-              ) : (
-                <Paperclip className="w-5 h-5" />
-              )}
-            </button>
-
             {/* Textarea */}
             <div className="flex-1 relative">
               <textarea
@@ -383,7 +250,7 @@ export default function MessageInput({ conversationId, replyTo, onCancelReply }:
 
             {/* Emoji */}
             <button
-              onClick={() => { setShowEmoji(!showEmoji); setShowAttachMenu(false); }}
+              onClick={() => { setShowEmoji(!showEmoji); }}
               className={`p-2.5 rounded-xl hover:bg-surface-hover transition-colors flex-shrink-0 ${showEmoji ? 'text-primary-500' : 'text-foreground/50 hover:text-foreground'}`}
             >
               <Smile className="w-5 h-5" />

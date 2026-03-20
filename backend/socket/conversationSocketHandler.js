@@ -67,14 +67,26 @@ module.exports = (io, socket, userSocketMap) => {
       const conversation = await Conversation.findById(conversationId);
       if (!conversation || !conversation.participants.includes(userId)) return;
 
+      // Media restrictions: only allow text + audio (voice notes) + system
+      const normalizedType = (type || 'text').toString();
+      const allowedTypes = new Set(['text', 'audio', 'system']);
+      if (!allowedTypes.has(normalizedType)) {
+        return;
+      }
+
+      // If audio, require a mediaUrl (uploaded via /api/upload)
+      if (normalizedType === 'audio' && !mediaUrl) {
+        return;
+      }
+
       // Save to DB
       const newMessage = await Message.create({
         conversationId,
         sender: userId,
-        type: type || 'text',
+        type: normalizedType,
         content: content || '',
-        mediaUrl: mediaUrl || '',
-        mediaType: mediaType || '',
+        mediaUrl: normalizedType === 'audio' ? (mediaUrl || '') : '',
+        mediaType: normalizedType === 'audio' ? (mediaType || 'audio') : '',
         replyTo: replyTo || null,
         readBy: [{ user: userId, readAt: Date.now() }],
         deliveredTo: [{ user: userId, deliveredAt: Date.now() }]

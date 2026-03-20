@@ -1,15 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, Shield, Image as ImageIcon, LogOut, Trash2, UserPlus, UserMinus, Ban, ChevronRight, Settings } from 'lucide-react';
+import { useState } from 'react';
+import { X, Shield, LogOut, Trash2, UserPlus, UserMinus, Ban, Settings } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useConversationStore, Conversation } from '@/store/useConversationStore';
 import { usePresenceStore } from '@/store/usePresenceStore';
-import { useMessageStore } from '@/store/useMessageStore';
 import { userApi } from '@/lib/api/userApi';
 import { conversationApi } from '@/lib/api/conversationApi';
 import toast from 'react-hot-toast';
-import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import GroupSettingsModal from './GroupSettingsModal';
 
@@ -21,22 +19,13 @@ interface ConversationInfoPanelProps {
 export default function ConversationInfoPanel({ conversation, onClose }: ConversationInfoPanelProps) {
   const user = useAuthStore((s) => s.user);
   const onlineUsers = usePresenceStore((s) => s.onlineUsers);
-  const messages = useMessageStore((s) => s.messages[conversation._id] || []);
-  const router = useRouter();
 
   const isGroup = conversation.type === 'group';
   const otherUser = !isGroup
     ? conversation.participants?.find((p: any) => p._id !== user?._id)
     : null;
 
-  // Shared media (images & videos from this conversation)
-  const sharedMedia = messages.filter(
-    (m) => (m.type === 'image' || m.type === 'video') && m.mediaUrl && !m.deletedForEveryone
-  );
-
-  const [showAllMedia, setShowAllMedia] = useState(false);
   const [showGroupSettings, setShowGroupSettings] = useState(false);
-  const displayMedia = showAllMedia ? sharedMedia : sharedMedia.slice(0, 6);
 
   // ── Actions ──────────────────────────────
   const handleBlockUser = async () => {
@@ -141,44 +130,6 @@ export default function ConversationInfoPanel({ conversation, onClose }: Convers
             </div>
           </div>
         )}
-
-        {/* Shared Media */}
-        <div className="px-4 pb-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold text-foreground/50 uppercase tracking-wider">
-              Shared Media
-            </p>
-            {sharedMedia.length > 6 && (
-              <button
-                onClick={() => setShowAllMedia(!showAllMedia)}
-                className="text-xs text-primary-500 hover:text-primary-400 transition-colors flex items-center gap-0.5"
-              >
-                {showAllMedia ? 'Show less' : `See all (${sharedMedia.length})`}
-                <ChevronRight className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-          {displayMedia.length > 0 ? (
-            <div className="grid grid-cols-3 gap-1.5">
-              {displayMedia.map((m) => (
-                <div
-                  key={m._id}
-                  className="aspect-square rounded-lg overflow-hidden bg-background border border-border cursor-pointer hover:opacity-80 transition-opacity"
-                >
-                  {m.type === 'image' ? (
-                    <img src={m.mediaUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-surface">
-                      <span className="text-foreground/30 text-lg">▶</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-foreground/30 text-center py-6">No shared media yet</p>
-          )}
-        </div>
 
         {/* ── Group: Participants List ── */}
         {isGroup && (

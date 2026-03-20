@@ -2,10 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import { Check, CheckCheck, Copy, Reply, Trash2, X, Download, FileText, Play, Pause } from 'lucide-react';
-import { Message, useMessageStore } from '@/store/useMessageStore';
+import { Check, CheckCheck, Copy, Reply, Trash2 } from 'lucide-react';
+import { Message } from '@/store/useMessageStore';
 import { useSocketStore } from '@/store/useSocketStore';
-import MediaViewer from './MediaViewer';
 import toast from 'react-hot-toast';
 
 interface MessageBubbleProps {
@@ -47,7 +46,6 @@ export default function MessageBubble({ message, isOwn, showSenderName, onReply,
 
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
-  const [showLightbox, setShowLightbox] = useState(false);
   const contextRef = useRef<HTMLDivElement>(null);
 
   // Close context menu on outside click
@@ -149,7 +147,8 @@ export default function MessageBubble({ message, isOwn, showSenderName, onReply,
       >
         <div className={`relative w-fit max-w-[75%] md:max-w-[60%] ${isOwn ? 'ml-auto' : 'mr-auto'}`} ref={contextRef}>
           <div
-            className={`
+            className={
+              `
               ${isOwn ? 'min-w-[4.5rem]' : 'min-w-[3.5rem]'} rounded-2xl relative transition-all duration-300 break-words [overflow-wrap:anywhere]
               ${isHighlighted ? 'ring-2 ring-yellow-400/60 shadow-lg shadow-yellow-400/10' : ''}
               ${isDeleted
@@ -158,12 +157,13 @@ export default function MessageBubble({ message, isOwn, showSenderName, onReply,
                   ? 'bg-primary-600 text-white rounded-br-md'
                   : 'bg-surface border border-border text-foreground rounded-bl-md'
               }
-              ${!isDeleted && (message.type === 'image' || message.type === 'video') ? 'p-1 pb-4' : message.type === 'document' ? 'px-2.5 pt-1.5 pb-5' : 'px-2.5 py-1.5'}
-            `}
+              px-2.5 py-1.5
+            `
+            }
           >
             {/* Sender name for group chats */}
             {!isOwn && showSenderName && senderName && !isDeleted && (
-              <p className={`text-xs font-semibold text-primary-400 mb-0.5 ${(message.type === 'image' || message.type === 'video') ? 'px-2 pt-1' : ''}`}>
+              <p className="text-xs font-semibold text-primary-400 mb-0.5">
                 {senderName}
               </p>
             )}
@@ -173,34 +173,6 @@ export default function MessageBubble({ message, isOwn, showSenderName, onReply,
               <p className="text-[15px]">🚫 This message was deleted</p>
             ) : (
               <>
-                {/* Image */}
-                {message.type === 'image' && message.mediaUrl && (
-                  <div className="cursor-pointer" onClick={() => setShowLightbox(true)}>
-                    <img
-                      src={message.mediaUrl}
-                      alt="Shared image"
-                      className="rounded-xl max-h-72 object-cover w-full"
-                      loading="lazy"
-                    />
-                  </div>
-                )}
-
-                {/* Video */}
-                {message.type === 'video' && message.mediaUrl && (
-                  <div className="cursor-pointer" onClick={() => setShowLightbox(true)}>
-                    <video
-                      src={message.mediaUrl}
-                      className="rounded-xl max-h-72 w-full"
-                      preload="metadata"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-12 h-12 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm">
-                        <Play className="w-6 h-6 text-white ml-0.5" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Audio */}
                 {message.type === 'audio' && message.mediaUrl && (
                   <div className="flex items-center gap-3 min-w-[220px]">
@@ -208,32 +180,9 @@ export default function MessageBubble({ message, isOwn, showSenderName, onReply,
                   </div>
                 )}
 
-                {/* Document / File */}
-                {message.type === 'document' && message.mediaUrl && (
-                  <a
-                    href={message.mediaUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`flex items-center gap-3 p-2 rounded-lg ${isOwn ? 'bg-white/10 hover:bg-white/15' : 'bg-background hover:bg-surface-hover'} transition-colors`}
-                  >
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isOwn ? 'bg-white/10' : 'bg-primary-600/10'}`}>
-                      <FileText className={`w-5 h-5 ${isOwn ? 'text-white' : 'text-primary-500'}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-[15px] font-medium truncate ${isOwn ? 'text-white' : 'text-foreground'}`}>
-                        {message.content || 'Document'}
-                      </p>
-                      <p className={`text-[10px] ${isOwn ? 'text-white/50' : 'text-foreground/40'}`}>
-                        Tap to download
-                      </p>
-                    </div>
-                    <Download className={`w-4 h-4 flex-shrink-0 ${isOwn ? 'text-white/50' : 'text-foreground/40'}`} />
-                  </a>
-                )}
-
-                {/* Text content (shown below media if both exist) */}
-                {message.content && message.type !== 'document' && (
-                  <p className={`text-[15px] whitespace-pre-wrap break-words leading-relaxed ${isOwn ? 'pr-13' : 'pr-8'} mb-0.5 ${(message.type === 'image' || message.type === 'video') ? 'px-2 pt-1.5' : ''}`}>
+                {/* Text content */}
+                {message.content && (
+                  <p className={`text-[15px] whitespace-pre-wrap break-words leading-relaxed ${isOwn ? 'pr-13' : 'pr-8'} mb-0.5`}>
                     {renderHighlightedText(message.content)}
                   </p>
                 )}
@@ -241,7 +190,7 @@ export default function MessageBubble({ message, isOwn, showSenderName, onReply,
             )}
  
             {/* Timestamp & Read Receipt */}
-            <div className={`absolute bottom-1 right-2 flex items-center justify-end gap-1 mt-0.5 ml-auto w-fit ${(message.type === 'image' || message.type === 'video') && !message.content ? 'pr-1 pb-0.5' : ''}`}>
+            <div className="absolute bottom-1 right-2 flex items-center justify-end gap-1 mt-0.5 ml-auto w-fit">
               <span className={`text-[11px] leading-none ${isOwn ? 'text-white/60' : 'text-foreground/30'}`}>
                 {time}
               </span>
@@ -290,15 +239,6 @@ export default function MessageBubble({ message, isOwn, showSenderName, onReply,
           )}
         </div>
       </div>
-
-      {/* Media Viewer Lightbox */}
-      {showLightbox && (message.type === 'image' || message.type === 'video') && (
-        <MediaViewer
-          conversationId={message.conversationId}
-          initialMessageId={message._id}
-          onClose={() => setShowLightbox(false)}
-        />
-      )}
     </>
   );
 }

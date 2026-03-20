@@ -54,10 +54,7 @@ export default function ConversationItem({ conversation, isActive, onSelect, unr
     if (msg.deletedForEveryone) return '🚫 Message deleted';
 
     let content = '';
-    if (msg.type === 'image') content = '📷 Photo';
-    else if (msg.type === 'video') content = '🎥 Video';
-    else if (msg.type === 'audio') content = '🎵 Audio';
-    else if (msg.type === 'document') content = '📄 Document';
+    if (msg.type === 'audio') content = '🎵 Audio';
     else content = msg.content || '';
 
     // Prepend sender name for group chats

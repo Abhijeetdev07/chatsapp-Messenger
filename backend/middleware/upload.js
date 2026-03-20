@@ -6,15 +6,9 @@ const storage = multer.memoryStorage();
 // File filter based on type
 const fileFilter = (req, file, cb) => {
   const allowedMimeTypes = [
-    // Images
-    'image/jpeg', 'image/png', 'image/webp', 'image/gif',
-    // Video
-    'video/mp4', 'video/webm',
     // Audio
     'audio/mpeg', 'audio/ogg', 'audio/wav',
-    // Documents
-    'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'text/plain'
+    'audio/webm'
   ];
 
   if (allowedMimeTypes.includes(file.mimetype)) {

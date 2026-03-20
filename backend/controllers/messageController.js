@@ -47,6 +47,16 @@ const sendMessage = async (req, res) => {
   try {
     const { conversationId, type, content, mediaUrl, mediaType, replyTo } = req.body;
 
+    const normalizedType = (type || 'text').toString();
+    const allowedTypes = new Set(['text', 'audio', 'system']);
+    if (!allowedTypes.has(normalizedType)) {
+      return res.status(400).json({ success: false, message: 'Unsupported message type' });
+    }
+
+    if (normalizedType === 'audio' && !mediaUrl) {
+      return res.status(400).json({ success: false, message: 'Audio message requires mediaUrl' });
+    }
+
     const conversation = await Conversation.findById(conversationId);
     if (!conversation || !conversation.participants.includes(req.user._id)) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
@@ -55,10 +65,10 @@ const sendMessage = async (req, res) => {
     const newMessage = await Message.create({
       conversationId,
       sender: req.user._id,
-      type: type || 'text',
+      type: normalizedType,
       content: content || '',
-      mediaUrl: mediaUrl || '',
-      mediaType: mediaType || '',
+      mediaUrl: normalizedType === 'audio' ? (mediaUrl || '') : '',
+      mediaType: normalizedType === 'audio' ? (mediaType || 'audio') : '',
       replyTo: replyTo || null,
       readBy: [{ user: req.user._id, readAt: Date.now() }],
       deliveredTo: [{ user: req.user._id, deliveredAt: Date.now() }]
