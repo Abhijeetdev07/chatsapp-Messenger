@@ -150,7 +150,7 @@ export default function MessageBubble({ message, isOwn, showSenderName, onReply,
         <div className={`relative w-fit max-w-[75%] md:max-w-[60%] ${isOwn ? 'ml-auto' : 'mr-auto'}`} ref={contextRef}>
           <div
             className={`
-              min-w-[3rem] rounded-2xl relative transition-all duration-300 break-words [overflow-wrap:anywhere]
+              ${isOwn ? 'min-w-[4.5rem]' : 'min-w-[3.5rem]'} rounded-2xl relative transition-all duration-300 break-words [overflow-wrap:anywhere]
               ${isHighlighted ? 'ring-2 ring-yellow-400/60 shadow-lg shadow-yellow-400/10' : ''}
               ${isDeleted
                 ? 'bg-surface border border-border italic text-foreground/30 px-2.5 py-1.5'
@@ -233,7 +233,7 @@ export default function MessageBubble({ message, isOwn, showSenderName, onReply,
 
                 {/* Text content (shown below media if both exist) */}
                 {message.content && message.type !== 'document' && (
-                  <p className={`text-[15px] whitespace-pre-wrap break-words leading-relaxed pr-10 mb-0.5 ${(message.type === 'image' || message.type === 'video') ? 'px-2 pt-1.5' : ''}`}>
+                  <p className={`text-[15px] whitespace-pre-wrap break-words leading-relaxed ${isOwn ? 'pr-13' : 'pr-8'} mb-0.5 ${(message.type === 'image' || message.type === 'video') ? 'px-2 pt-1.5' : ''}`}>
                     {renderHighlightedText(message.content)}
                   </p>
                 )}
