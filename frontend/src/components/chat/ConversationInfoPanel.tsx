@@ -34,6 +34,16 @@ export default function ConversationInfoPanel({ conversation, onClose }: Convers
     (user as any)?.blockedUsers?.some((id: any) => id?.toString?.() === otherUser._id?.toString?.() || id === otherUser._id)
   );
 
+  const getMaskedEmail = (email?: string) => {
+    if (!email || typeof email !== 'string') return '—';
+    const atIndex = email.indexOf('@');
+    if (atIndex <= 0) return '—';
+    const local = email.slice(0, atIndex);
+    const domain = email.slice(atIndex);
+    const prefix = local.slice(0, 3);
+    return `${prefix}*****${domain}`;
+  };
+
   // ── Actions ──────────────────────────────
   const handleBlockUser = async () => {
     if (!otherUser) return;
@@ -149,7 +159,7 @@ export default function ConversationInfoPanel({ conversation, onClose }: Convers
           <div className="px-4 pb-4">
             <div className="bg-background rounded-xl p-4 border border-border">
               <p className="text-xs text-foreground/40 mb-1">Email</p>
-              <p className="text-sm text-foreground">{(otherUser as any).email || '—'}</p>
+              <p className="text-sm text-foreground">{getMaskedEmail((otherUser as any).email)}</p>
             </div>
           </div>
         )}

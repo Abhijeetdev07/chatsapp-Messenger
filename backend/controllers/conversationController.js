@@ -12,7 +12,7 @@ const getConversations = async (req, res) => {
     const conversations = await Conversation.find({
       participants: { $in: [req.user._id] }
     })
-      .populate('participants', 'username avatar status lastSeen')
+      .populate('participants', 'username email avatar status lastSeen')
       .populate('lastMessage')
       .sort({ updatedAt: -1 });
 
@@ -48,7 +48,7 @@ const createDirectConversation = async (req, res) => {
     let conversation = await Conversation.findOne({
       type: 'direct',
       participants: { $all: [req.user._id, targetUserId] }
-    }).populate('participants', 'username avatar status lastSeen');
+    }).populate('participants', 'username email avatar status lastSeen');
 
     if (conversation) {
       return res.json({ success: true, conversation });
@@ -60,7 +60,7 @@ const createDirectConversation = async (req, res) => {
       participants: [req.user._id, targetUserId]
     });
 
-    conversation = await conversation.populate('participants', 'username avatar status lastSeen');
+    conversation = await conversation.populate('participants', 'username email avatar status lastSeen');
 
     res.status(201).json({ success: true, conversation });
   } catch (error) {
@@ -105,7 +105,7 @@ const createGroupConversation = async (req, res) => {
 const getConversationById = async (req, res) => {
   try {
     const conversation = await Conversation.findById(req.params.id)
-      .populate('participants', 'username avatar status bio')
+      .populate('participants', 'username email avatar status bio lastSeen')
       .populate('groupAdmin', 'username');
 
     if (!conversation) {
