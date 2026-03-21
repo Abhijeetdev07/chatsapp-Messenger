@@ -86,7 +86,7 @@ module.exports = (io, socket, userSocketMap) => {
       if (!conversation || !conversation.participants.includes(userId)) return;
 
       // Block enforcement (direct chats only)
-      let recipientBlockedSender = false;
+      let blockedBetweenUsers = false;
       if (conversation.type === 'direct') {
         const otherParticipantId = conversation.participants
           .find((p) => p.toString() !== userId)?.toString();
@@ -97,11 +97,8 @@ module.exports = (io, socket, userSocketMap) => {
           ]);
           const senderBlockedOther = !!senderUser?.blockedUsers?.some((id) => id.toString() === otherParticipantId);
           const otherBlockedSender = !!otherUser?.blockedUsers?.some((id) => id.toString() === userId);
-          // If YOU blocked them, you can't message them
-          if (senderBlockedOther) return;
-
-          // If THEY blocked you, allow "sent" but do not deliver
-          recipientBlockedSender = otherBlockedSender;
+          // If either side blocked, allow "sent" but do not deliver (single tick)
+          blockedBetweenUsers = senderBlockedOther || otherBlockedSender;
         }
       }
 
@@ -133,8 +130,8 @@ module.exports = (io, socket, userSocketMap) => {
 
       const populatedMessage = await newMessage.populate('sender', 'username avatar');
 
-      // If recipient has blocked sender, emit ONLY to sender and do NOT bump conversation lastMessage/updatedAt
-      if (recipientBlockedSender) {
+      // If either side blocked, emit ONLY to sender and do NOT bump conversation lastMessage/updatedAt
+      if (blockedBetweenUsers) {
         const senderSockets = Array.from(userSocketMap.get(userId) || []);
         senderSockets.forEach((id) => {
           io.to(id).emit('receive_message', populatedMessage);

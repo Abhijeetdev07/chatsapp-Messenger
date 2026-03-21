@@ -41,7 +41,7 @@ export default function ChatWindow() {
   }
 
   return (
-    <div className="flex-1 flex h-full min-w-0">
+    <div className="flex-1 relative h-full min-w-0">
       {/* Main chat area */}
       <div className="flex-1 flex flex-col h-full min-w-0">
         <ChatHeader
@@ -74,10 +74,20 @@ export default function ChatWindow() {
 
       {/* Info Panel */}
       {showInfoPanel && (
-        <ConversationInfoPanel
-          conversation={activeConversation}
-          onClose={() => setShowInfoPanel(false)}
-        />
+        <div className="absolute inset-0 z-50">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40"
+            aria-label="Close info panel"
+            onClick={() => setShowInfoPanel(false)}
+          />
+          <div className="absolute right-0 top-0 h-full w-full md:w-[360px]">
+            <ConversationInfoPanel
+              conversation={activeConversation}
+              onClose={() => setShowInfoPanel(false)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

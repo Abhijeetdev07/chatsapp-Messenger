@@ -70,7 +70,7 @@ const sendMessage = async (req, res) => {
     }
 
     // Block enforcement (direct chats only)
-    let recipientBlockedSender = false;
+    let blockedBetweenUsers = false;
     if (conversation.type === 'direct') {
       const otherParticipantId = conversation.participants
         .find((p) => p.toString() !== req.user._id.toString())?.toString();
@@ -81,13 +81,8 @@ const sendMessage = async (req, res) => {
         ]);
         const senderBlockedOther = !!senderUser?.blockedUsers?.some((id) => id.toString() === otherParticipantId);
         const otherBlockedSender = !!otherUser?.blockedUsers?.some((id) => id.toString() === req.user._id.toString());
-        // If YOU blocked them, you can't message them
-        if (senderBlockedOther) {
-          return res.status(403).json({ success: false, message: 'Messaging is blocked' });
-        }
-
-        // If THEY blocked you, allow "sent" but do not deliver or bump lastMessage
-        recipientBlockedSender = otherBlockedSender;
+        // If either side blocked, allow "sent" but do not deliver/bump lastMessage (single tick)
+        blockedBetweenUsers = senderBlockedOther || otherBlockedSender;
       }
     }
 
@@ -106,8 +101,8 @@ const sendMessage = async (req, res) => {
 
     const populatedMessage = await newMessage.populate('sender', 'username avatar');
 
-    // If recipient blocked sender, do not bump conversation lastMessage/updatedAt
-    if (!recipientBlockedSender) {
+    // If either side blocked, do not bump conversation lastMessage/updatedAt
+    if (!blockedBetweenUsers) {
       conversation.lastMessage = populatedMessage._id;
       await conversation.save();
     }
