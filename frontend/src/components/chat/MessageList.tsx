@@ -80,7 +80,7 @@ export default function MessageList({ conversationId, onReply, highlightedMessag
         setLoading(true);
         const res = await messageApi.getMessages(conversationId);
         if (res.success) {
-          setMessages(conversationId, res.messages.reverse(), res.hasMore ?? false);
+          setMessages(conversationId, res.messages, res.hasMore ?? false);
         }
       } catch (error) {
         console.error('Failed to fetch messages:', error);
@@ -124,7 +124,7 @@ export default function MessageList({ conversationId, onReply, highlightedMessag
         const cursor = messages[0]?._id;
         const res = await messageApi.getMessages(conversationId, cursor);
         if (res.success && res.messages.length > 0) {
-          appendMessages(conversationId, res.messages.reverse(), res.hasMore ?? false);
+          appendMessages(conversationId, res.messages, res.hasMore ?? false);
           // Preserve scroll position after prepending
           requestAnimationFrame(() => {
             container.scrollTop = container.scrollHeight - oldScrollHeight;

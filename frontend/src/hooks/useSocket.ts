@@ -8,6 +8,8 @@ import { useMessageStore } from '@/store/useMessageStore';
 import { usePresenceStore } from '@/store/usePresenceStore';
 import { useTypingStore } from '@/store/useTypingStore';
 import { useNotifications } from '@/hooks/useNotifications';
+import { conversationApi } from '@/lib/api/conversationApi';
+import { messageApi } from '@/lib/api/messageApi';
 
 /**
  * Central real-time hook. Mount this ONCE at the app shell level.
@@ -41,6 +43,29 @@ export const useSocket = () => {
   useEffect(() => {
     if (!socket || listenersRegistered.current) return;
     listenersRegistered.current = true;
+
+    const syncAfterConnect = async () => {
+      try {
+        const convRes = await conversationApi.getConversations();
+        if (convRes?.success && Array.isArray(convRes.conversations)) {
+          useConversationStore.getState().setConversations(convRes.conversations);
+        }
+
+        const activeConversationId = useConversationStore.getState().activeConversationId;
+        if (activeConversationId) {
+          const msgRes = await messageApi.getMessages(activeConversationId);
+          if (msgRes?.success && Array.isArray(msgRes.messages)) {
+            useMessageStore.getState().setMessages(activeConversationId, msgRes.messages, msgRes.hasMore ?? false);
+          }
+        }
+      } catch {
+      }
+    };
+
+    socket.on('connect', syncAfterConnect);
+    if (socket.connected) {
+      syncAfterConnect();
+    }
 
     // ── Presence Events ──────────────────────────────────
     socket.on('user_online', ({ userId }: { userId: string }) => {
@@ -122,6 +147,7 @@ export const useSocket = () => {
 
     // Cleanup: remove all listeners safely on unmount
     return () => {
+      socket.off('connect');
       socket.off('user_online');
       socket.off('user_offline');
       socket.off('status_change');
