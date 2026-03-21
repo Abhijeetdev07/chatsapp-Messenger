@@ -265,7 +265,7 @@ export default function MessageInput({ conversationId, replyTo, onCancelReply }:
             </div>
           )}
 
-          <div className="flex items-end gap-2">
+          <div className="flex items-center gap-2">
             {/* Textarea */}
             <div className="flex-1 relative">
               <textarea
@@ -275,14 +275,14 @@ export default function MessageInput({ conversationId, replyTo, onCancelReply }:
                 onKeyDown={handleKeyDown}
                 placeholder="Type a message..."
                 rows={1}
-                className="w-full px-4 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all resize-none max-h-[120px]"
+                className="w-full min-h-10 px-4 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all resize-none max-h-[120px]"
               />
             </div>
 
             {/* Emoji */}
             <button
               onClick={() => { setShowEmoji(!showEmoji); }}
-              className={`p-2.5 rounded-xl hover:bg-surface-hover transition-colors flex-shrink-0 ${showEmoji ? 'text-primary-500' : 'text-foreground/50 hover:text-foreground'}`}
+              className={`h-10 w-10 rounded-xl hover:bg-surface-hover transition-colors flex-shrink-0 flex items-center justify-center ${showEmoji ? 'text-primary-500' : 'text-foreground/50 hover:text-foreground'}`}
             >
               <Smile className="w-5 h-5" />
             </button>
@@ -292,14 +292,14 @@ export default function MessageInput({ conversationId, replyTo, onCancelReply }:
               <button
                 onClick={handleSend}
                 disabled={isUploading}
-                className="p-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+                className="h-10 w-10 rounded-xl bg-primary-600 hover:bg-primary-500 text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0 flex items-center justify-center"
               >
                 <Send className="w-5 h-5" />
               </button>
             ) : (
               <button
                 onMouseDown={startRecording}
-                className="p-2.5 rounded-xl hover:bg-surface-hover text-foreground/50 hover:text-primary-500 transition-colors flex-shrink-0"
+                className="h-10 w-10 rounded-xl hover:bg-surface-hover text-foreground/50 hover:text-primary-500 transition-colors flex-shrink-0 flex items-center justify-center"
                 title="Hold to record voice note"
               >
                 <Mic className="w-5 h-5" />
