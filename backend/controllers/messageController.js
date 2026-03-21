@@ -1,5 +1,6 @@
 const Message = require('../models/Message');
 const Conversation = require('../models/Conversation');
+const User = require('../models/User');
 
 // @desc    Get paginated messages for a conversation
 // @route   GET /api/messages/:conversationId
@@ -21,6 +22,12 @@ const getMessages = async (req, res) => {
       deletedForEveryone: false,
       deletedFor: { $ne: req.user._id }
     };
+
+    // Hide messages from users I have blocked (primarily affects direct chats)
+    const currentUser = await User.findById(req.user._id).select('blockedUsers');
+    if (currentUser?.blockedUsers?.length) {
+      query.sender = { $nin: currentUser.blockedUsers };
+    }
 
     if (cursor) {
       query._id = { $lt: cursor };
@@ -62,6 +69,28 @@ const sendMessage = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
+    // Block enforcement (direct chats only)
+    let recipientBlockedSender = false;
+    if (conversation.type === 'direct') {
+      const otherParticipantId = conversation.participants
+        .find((p) => p.toString() !== req.user._id.toString())?.toString();
+      if (otherParticipantId) {
+        const [senderUser, otherUser] = await Promise.all([
+          User.findById(req.user._id).select('blockedUsers'),
+          User.findById(otherParticipantId).select('blockedUsers'),
+        ]);
+        const senderBlockedOther = !!senderUser?.blockedUsers?.some((id) => id.toString() === otherParticipantId);
+        const otherBlockedSender = !!otherUser?.blockedUsers?.some((id) => id.toString() === req.user._id.toString());
+        // If YOU blocked them, you can't message them
+        if (senderBlockedOther) {
+          return res.status(403).json({ success: false, message: 'Messaging is blocked' });
+        }
+
+        // If THEY blocked you, allow "sent" but do not deliver or bump lastMessage
+        recipientBlockedSender = otherBlockedSender;
+      }
+    }
+
     const newMessage = await Message.create({
       conversationId,
       sender: req.user._id,
@@ -76,10 +105,12 @@ const sendMessage = async (req, res) => {
     });
 
     const populatedMessage = await newMessage.populate('sender', 'username avatar');
-    
-    // Update the conversation with the newest message pointer
-    conversation.lastMessage = populatedMessage._id;
-    await conversation.save();
+
+    // If recipient blocked sender, do not bump conversation lastMessage/updatedAt
+    if (!recipientBlockedSender) {
+      conversation.lastMessage = populatedMessage._id;
+      await conversation.save();
+    }
 
     res.status(201).json({ success: true, message: populatedMessage });
   } catch (error) {

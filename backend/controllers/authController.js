@@ -186,6 +186,7 @@ const getMe = async (req, res) => {
         avatar: user.avatar,
         bio: user.bio,
         status: user.status,
+        blockedUsers: user.blockedUsers,
       },
     });
   } catch (error) {

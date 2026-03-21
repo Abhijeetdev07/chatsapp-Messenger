@@ -2,6 +2,16 @@ const Message = require('../models/Message');
 const User = require('../models/User');
 const Conversation = require('../models/Conversation');
 
+const isBlockedBetween = async (aId, bId) => {
+  const [a, b] = await Promise.all([
+    User.findById(aId).select('blockedUsers'),
+    User.findById(bId).select('blockedUsers'),
+  ]);
+  const aBlockedB = !!a?.blockedUsers?.some((id) => id.toString() === bId.toString());
+  const bBlockedA = !!b?.blockedUsers?.some((id) => id.toString() === aId.toString());
+  return aBlockedB || bBlockedA;
+};
+
 module.exports = (io, socket, userSocketMap) => {
   const userId = socket.user._id.toString();
 
@@ -18,12 +28,16 @@ module.exports = (io, socket, userSocketMap) => {
       user.status = 'online';
       await user.save();
 
-      user.contacts.forEach((contact) => {
-        const contactSocketIds = Array.from(userSocketMap.get(contact._id.toString()) || []);
-        contactSocketIds.forEach(id => {
+      for (const contact of user.contacts) {
+        const contactId = contact._id.toString();
+        const blocked = await isBlockedBetween(userId, contactId);
+        if (blocked) continue;
+
+        const contactSocketIds = Array.from(userSocketMap.get(contactId) || []);
+        contactSocketIds.forEach((id) => {
           io.to(id).emit('user_online', { userId, status: 'online' });
         });
-      });
+      }
     } catch (err) {
       console.error('Notify Online Error:', err);
     }
@@ -44,12 +58,16 @@ module.exports = (io, socket, userSocketMap) => {
       if (status === 'offline') user.lastSeen = Date.now();
       await user.save();
 
-      user.contacts.forEach((contact) => {
-        const contactSocketIds = Array.from(userSocketMap.get(contact._id.toString()) || []);
-        contactSocketIds.forEach(id => {
+      for (const contact of user.contacts) {
+        const contactId = contact._id.toString();
+        const blocked = await isBlockedBetween(userId, contactId);
+        if (blocked) continue;
+
+        const contactSocketIds = Array.from(userSocketMap.get(contactId) || []);
+        contactSocketIds.forEach((id) => {
           io.to(id).emit('status_change', { userId, status, lastSeen: user.lastSeen });
         });
-      });
+      }
     } catch (err) {
       console.error('Status Change Error:', err);
     }
@@ -66,6 +84,26 @@ module.exports = (io, socket, userSocketMap) => {
 
       const conversation = await Conversation.findById(conversationId);
       if (!conversation || !conversation.participants.includes(userId)) return;
+
+      // Block enforcement (direct chats only)
+      let recipientBlockedSender = false;
+      if (conversation.type === 'direct') {
+        const otherParticipantId = conversation.participants
+          .find((p) => p.toString() !== userId)?.toString();
+        if (otherParticipantId) {
+          const [senderUser, otherUser] = await Promise.all([
+            User.findById(userId).select('blockedUsers'),
+            User.findById(otherParticipantId).select('blockedUsers'),
+          ]);
+          const senderBlockedOther = !!senderUser?.blockedUsers?.some((id) => id.toString() === otherParticipantId);
+          const otherBlockedSender = !!otherUser?.blockedUsers?.some((id) => id.toString() === userId);
+          // If YOU blocked them, you can't message them
+          if (senderBlockedOther) return;
+
+          // If THEY blocked you, allow "sent" but do not deliver
+          recipientBlockedSender = otherBlockedSender;
+        }
+      }
 
       // Media restrictions: only allow text + audio (voice notes) + system
       const normalizedType = (type || 'text').toString();
@@ -94,7 +132,16 @@ module.exports = (io, socket, userSocketMap) => {
       });
 
       const populatedMessage = await newMessage.populate('sender', 'username avatar');
-      
+
+      // If recipient has blocked sender, emit ONLY to sender and do NOT bump conversation lastMessage/updatedAt
+      if (recipientBlockedSender) {
+        const senderSockets = Array.from(userSocketMap.get(userId) || []);
+        senderSockets.forEach((id) => {
+          io.to(id).emit('receive_message', populatedMessage);
+        });
+        return;
+      }
+
       conversation.lastMessage = populatedMessage._id;
       await conversation.save();
 
@@ -159,6 +206,15 @@ module.exports = (io, socket, userSocketMap) => {
       const conversation = await Conversation.findById(conversationId);
       if (!conversation || !conversation.participants.includes(userId)) return;
 
+      if (conversation.type === 'direct') {
+        const otherParticipantId = conversation.participants
+          .find((p) => p.toString() !== userId)?.toString();
+        if (otherParticipantId) {
+          const blocked = await isBlockedBetween(userId, otherParticipantId);
+          if (blocked) return;
+        }
+      }
+
       conversation.participants.forEach((participantId) => {
         const pIdStr = participantId.toString();
         if (pIdStr === userId) return; // Don't emit to self
@@ -178,6 +234,15 @@ module.exports = (io, socket, userSocketMap) => {
     try {
       const conversation = await Conversation.findById(conversationId);
       if (!conversation || !conversation.participants.includes(userId)) return;
+
+      if (conversation.type === 'direct') {
+        const otherParticipantId = conversation.participants
+          .find((p) => p.toString() !== userId)?.toString();
+        if (otherParticipantId) {
+          const blocked = await isBlockedBetween(userId, otherParticipantId);
+          if (blocked) return;
+        }
+      }
 
       conversation.participants.forEach((participantId) => {
         const pIdStr = participantId.toString();
@@ -239,12 +304,16 @@ module.exports.handleDisconnectPresence = async (io, userSocketMap, userId) => {
      user.lastSeen = Date.now();
      await user.save();
 
-     user.contacts.forEach((contact) => {
-       const contactSocketIds = Array.from(userSocketMap.get(contact._id.toString()) || []);
-       contactSocketIds.forEach(id => {
+     for (const contact of user.contacts) {
+       const contactId = contact._id.toString();
+       const blocked = await isBlockedBetween(userId, contactId);
+       if (blocked) continue;
+
+       const contactSocketIds = Array.from(userSocketMap.get(contactId) || []);
+       contactSocketIds.forEach((id) => {
          io.to(id).emit('user_offline', { userId, status: 'offline', lastSeen: user.lastSeen });
        });
-     });
+     }
   } catch (err) {
     console.error('Disconnect Presence Error:', err);
   }

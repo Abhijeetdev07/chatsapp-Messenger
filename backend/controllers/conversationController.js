@@ -7,6 +7,8 @@ const User = require('../models/User');
 // @access  Private
 const getConversations = async (req, res) => {
   try {
+    const currentUser = await User.findById(req.user._id).select('blockedUsers');
+
     const conversations = await Conversation.find({
       participants: { $in: [req.user._id] }
     })
@@ -14,7 +16,17 @@ const getConversations = async (req, res) => {
       .populate('lastMessage')
       .sort({ updatedAt: -1 });
 
-    res.json({ success: true, conversations });
+    const blockedSet = new Set((currentUser?.blockedUsers || []).map((id) => id.toString()));
+    const sanitized = conversations.map((conv) => {
+      if (conv.type !== 'direct' || !conv.lastMessage) return conv;
+      const senderId = conv.lastMessage.sender?.toString?.() || conv.lastMessage.sender;
+      if (senderId && blockedSet.has(senderId.toString())) {
+        conv.lastMessage = null;
+      }
+      return conv;
+    });
+
+    res.json({ success: true, conversations: sanitized });
   } catch (error) {
     console.error('getConversations Error:', error);
     res.status(500).json({ success: false, message: 'Server error' });

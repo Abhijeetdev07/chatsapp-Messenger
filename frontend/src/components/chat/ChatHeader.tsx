@@ -27,6 +27,12 @@ export default function ChatHeader({ conversation, onToggleInfo, onToggleSearch 
   const otherUser = !isGroup
     ? conversation.participants?.find((p: any) => p._id !== user?._id)
     : null;
+
+  const isBlocked = !!(
+    !isGroup &&
+    otherUser &&
+    (user as any)?.blockedUsers?.some((id: any) => id?.toString?.() === otherUser._id?.toString?.() || id === otherUser._id)
+  );
   const name = isGroup
     ? conversation.groupName || 'Group Chat'
     : otherUser?.username || 'Unknown';
@@ -34,6 +40,7 @@ export default function ChatHeader({ conversation, onToggleInfo, onToggleSearch 
 
   // Typing status text
   const getTypingText = () => {
+    if (isBlocked) return null;
     if (!typingUsers || typingUsers.size === 0) return null;
     const typingArray = Array.from(typingUsers).filter((id) => id !== user?._id);
     if (typingArray.length === 0) return null;
@@ -53,6 +60,9 @@ export default function ChatHeader({ conversation, onToggleInfo, onToggleSearch 
 
   // Subtitle: typing > online > last seen > offline
   const getSubtitle = () => {
+    if (isBlocked && !isGroup) {
+      return { text: '', className: 'text-foreground/40' };
+    }
     if (typingText) return { text: typingText, className: 'text-green-400 italic' };
 
     if (isGroup) {
@@ -102,7 +112,7 @@ export default function ChatHeader({ conversation, onToggleInfo, onToggleSearch 
           ) : (
             <Avatar src={otherUser?.avatar} fallback={name || '?'} size="md" className="bg-primary-600 border-none" />
           )}
-          {isOnline && !isGroup && (
+          {isOnline && !isGroup && !isBlocked && (
             <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-surface z-10" />
           )}
         </div>
@@ -110,9 +120,11 @@ export default function ChatHeader({ conversation, onToggleInfo, onToggleSearch 
         {/* Name & Status */}
         <div className="min-w-0">
           <p className="text-sm font-semibold text-foreground truncate">{name}</p>
-          <p className={`text-xs truncate ${subtitle.className}`}>
-            {subtitle.text}
-          </p>
+          {subtitle.text ? (
+            <p className={`text-xs truncate ${subtitle.className}`}>
+              {subtitle.text}
+            </p>
+          ) : null}
         </div>
       </div>
 

@@ -18,6 +18,7 @@ interface ConversationInfoPanelProps {
 
 export default function ConversationInfoPanel({ conversation, onClose }: ConversationInfoPanelProps) {
   const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
   const onlineUsers = usePresenceStore((s) => s.onlineUsers);
 
   const isGroup = conversation.type === 'group';
@@ -27,14 +28,36 @@ export default function ConversationInfoPanel({ conversation, onClose }: Convers
 
   const [showGroupSettings, setShowGroupSettings] = useState(false);
 
+  const isBlocked = !!(
+    !isGroup &&
+    otherUser &&
+    (user as any)?.blockedUsers?.some((id: any) => id?.toString?.() === otherUser._id?.toString?.() || id === otherUser._id)
+  );
+
   // ── Actions ──────────────────────────────
   const handleBlockUser = async () => {
     if (!otherUser) return;
     try {
-      await userApi.blockUser(otherUser._id);
+      const res = await userApi.blockUser(otherUser._id);
+      if (res?.blockedUsers && user) {
+        setUser({ ...user, blockedUsers: res.blockedUsers });
+      }
       toast.success(`${otherUser.username} blocked`);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to block');
+    }
+  };
+
+  const handleUnblockUser = async () => {
+    if (!otherUser) return;
+    try {
+      const res = await userApi.unblockUser(otherUser._id);
+      if (res?.blockedUsers && user) {
+        setUser({ ...user, blockedUsers: res.blockedUsers });
+      }
+      toast.success(`${otherUser.username} unblocked`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to unblock');
     }
   };
 
@@ -91,7 +114,7 @@ export default function ConversationInfoPanel({ conversation, onClose }: Convers
           </h3>
 
           {/* Online status / last seen */}
-          {!isGroup && otherUser && (
+          {!isGroup && otherUser && !isBlocked && (
             <p className={`text-sm mt-1 ${onlineUsers.has(otherUser._id) ? 'text-green-400' : 'text-foreground/40'}`}>
               {onlineUsers.has(otherUser._id)
                 ? 'online'
@@ -203,11 +226,11 @@ export default function ConversationInfoPanel({ conversation, onClose }: Convers
             {/* Block user (direct chats only) */}
             {!isGroup && otherUser && (
               <button
-                onClick={handleBlockUser}
+                onClick={isBlocked ? handleUnblockUser : handleBlockUser}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors text-sm"
               >
                 <Ban className="w-5 h-5" />
-                Block {otherUser.username}
+                {isBlocked ? `Unblock ${otherUser.username}` : `Block ${otherUser.username}`}
               </button>
             )}
 
