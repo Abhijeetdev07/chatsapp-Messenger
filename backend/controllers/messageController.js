@@ -1,6 +1,7 @@
 const Message = require('../models/Message');
 const Conversation = require('../models/Conversation');
 const User = require('../models/User');
+const { getReceiverSocketIds, getIo } = require('../socket/socketManager');
 
 // @desc    Get paginated messages for a conversation
 // @route   GET /api/messages/:conversationId
@@ -106,6 +107,18 @@ const sendMessage = async (req, res) => {
       conversation.lastMessage = populatedMessage._id;
       await conversation.save();
     }
+
+    // Emit real-time message to participants so mobile doesn't need refresh
+    const senderId = req.user._id.toString();
+    const participants = (conversation.participants || []).map((p) => p.toString());
+    const targets = blockedBetweenUsers ? [senderId] : participants;
+
+    targets.forEach((pId) => {
+      const socketIds = getReceiverSocketIds(pId);
+      socketIds.forEach((id) => {
+        getIo().to(id).emit('receive_message', populatedMessage);
+      });
+    });
 
     res.status(201).json({ success: true, message: populatedMessage });
   } catch (error) {
