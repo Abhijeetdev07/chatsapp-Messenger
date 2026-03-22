@@ -143,6 +143,17 @@ const deleteMessageForMe = async (req, res) => {
       await message.save();
     }
 
+    // Emit delete update only to the requesting user (delete-for-me is private)
+    const mySocketIds = getReceiverSocketIds(req.user._id.toString());
+    mySocketIds.forEach((id) => {
+      getIo().to(id).emit('message_deleted', {
+        messageId: message._id.toString(),
+        conversationId: message.conversationId.toString(),
+        deleteForEveryone: false,
+        userId: req.user._id.toString(),
+      });
+    });
+
     res.json({ success: true, message: 'Message deleted for you' });
   } catch (error) {
     console.error('deleteMessageForMe Error:', error);
@@ -171,6 +182,20 @@ const deleteMessageForEveryone = async (req, res) => {
     message.mediaUrl = '';
     
     await message.save();
+
+    // Emit delete update to all participants
+    const conversation = await Conversation.findById(message.conversationId).select('participants');
+    const participants = (conversation?.participants || []).map((p) => p.toString());
+    participants.forEach((pId) => {
+      const socketIds = getReceiverSocketIds(pId);
+      socketIds.forEach((id) => {
+        getIo().to(id).emit('message_deleted', {
+          messageId: message._id.toString(),
+          conversationId: message.conversationId.toString(),
+          deleteForEveryone: true,
+        });
+      });
+    });
 
     res.json({ success: true, message: 'Message deleted for everyone', deletedMessage: message });
   } catch (error) {
