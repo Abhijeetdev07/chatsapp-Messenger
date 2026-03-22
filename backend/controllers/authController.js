@@ -49,6 +49,7 @@ const register = async (req, res) => {
       res.status(201).json({
         success: true,
         accessToken,
+        refreshToken,
         user: {
           _id: user._id,
           id: user._id,
@@ -96,6 +97,7 @@ const login = async (req, res) => {
       res.json({
         success: true,
         accessToken,
+        refreshToken,
         user: {
           _id: user._id,
           id: user._id,
@@ -137,7 +139,7 @@ const logout = async (req, res) => {
 const refreshToken = async (req, res) => {
   try {
     // Note: requires cookie-parser middleware in server.js to work
-    const token = req.cookies?.jwt;
+    const token = req.cookies?.jwt || req.body?.refreshToken;
 
     if (!token) {
       return res.status(401).json({ success: false, message: 'Not authorized, no refresh token' });

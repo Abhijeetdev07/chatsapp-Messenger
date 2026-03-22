@@ -32,7 +32,10 @@ initSocket(server);
 app.use(express.json()); // Parses incoming JSON requests
 app.use(cookieParser()); // Parses HTTP-only cookies
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: [
+    process.env.CLIENT_URL || 'http://localhost:3000',
+    'http://localhost:8081'
+  ],
   credentials: true
 })); // Enables CORS
 
